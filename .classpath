@@ -32,28 +32,11 @@
 			<attribute name="optional" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry combineaccessrules="false" kind="src" path="/pdptw-dataset-generator"/>
 	<classpathentry kind="src" path="target\generated-sources\annotations">
 		<attributes>
 			<attribute name="optional" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry combineaccessrules="false" kind="src" path="/RinLog"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/rinsim-central"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/rinsim-core"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/rinsim-example"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/rinsim-experiment"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/rinsim-pdptw"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/rinsim-scenario"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/rinsim-scenario-util"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/rinsim-cli"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/rinsim-event"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/rinsim-fsm"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/rinsim-geom"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/rinsim-io"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/rinsim-test-util"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/rinsim-ui"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/osm-to-dot-converter"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

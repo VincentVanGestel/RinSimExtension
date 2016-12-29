@@ -51,6 +51,7 @@ import com.github.rinde.rinsim.pdptw.common.AddParcelEvent;
 import com.github.rinde.rinsim.pdptw.common.AddVehicleEvent;
 import com.github.rinde.rinsim.pdptw.common.ChangeConnectionSpeedEvent;
 import com.github.rinde.rinsim.pdptw.common.ObjectiveFunction;
+import com.github.rinde.rinsim.pdptw.common.PDPDynamicGraphRoadModel;
 import com.github.rinde.rinsim.pdptw.common.PDPRoadModel;
 import com.github.rinde.rinsim.pdptw.common.RouteFollowingVehicle;
 import com.github.rinde.rinsim.pdptw.common.RoutePanel;
@@ -68,32 +69,52 @@ import com.github.rinde.rinsim.ui.View;
 import com.github.rinde.rinsim.ui.renderers.GraphRoadModelRenderer;
 import com.github.rinde.rinsim.ui.renderers.PDPModelRenderer;
 import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
+import com.github.vincentvangestel.osmdot.OsmConverter;
+import com.github.vincentvangestel.osmdot.pruner.CenterPruner;
+import com.github.vincentvangestel.osmdot.pruner.RoundAboutPruner;
 import com.github.vincentvangestel.rinsimextension.vehicle.Taxi;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 
 public class ExperimentRunner {
 
+	/**
+	 * Usage: args = [ generate/experiment datasetID ]
+	 * @param args
+	 * @throws IOException
+	 */
 	public static void main(String[] args) throws IOException {
+		
+		if(args.length < 2) {
+			throw new IllegalArgumentException("Usage: args = [ g/e datasetID]");
+		}
+		
+		String graphPath = new String("files/maps/dot/leuven-large-pruned.dot");
+		
+		if(args[0].equalsIgnoreCase("g") || args[0].equalsIgnoreCase("generate")) {
+			generateDataset(graphPath, args[1].toLowerCase());
+		} else if(args[0].equalsIgnoreCase("e") || args[0].equalsIgnoreCase("experiment")) {
+			performExperiment(graphPath, args[1].toLowerCase());
+		}
 		
 		/**
 		 * Comment this if you don't want a new graph to be constructed!
 		 */
-		/*
-		 * Graph<MultiAttributeData> g = new OsmConverter()
-		 * .setOutputDir("files/maps/dot")
-		 * .withOutputName("leuven-large-double-pruned.dot") .withPruner(new
-		 * CenterPruner(), new RoundAboutPruner())
-		 * .convert("files/maps/osm/leuven-large.osm"); /
-		 **/
+		/**
+		 Graph<MultiAttributeData> g = new OsmConverter()
+		  .setOutputDir("files/maps/dot")
+		  .withOutputName("leuven-large-pruned.dot")
+		  .withPruner(new CenterPruner())
+		  .convert("files/maps/osm/leuven-large.osm");
+		 /**/
 		
-		String graphPath = new String("files/maps/dot/leuven-large-pruned.dot");
 		
-		// readGraph("files/maps/leuven-large.dot");
+		// readGraph("files/maps/dot/leuven-large-pruned.dot");
 		// readGraph("files/maps/brussels-simple.dot");
 
-		Graph<MultiAttributeData> g = returnGraph(graphPath);
+		//Graph<MultiAttributeData> g = returnGraph(graphPath);
 		// Graph<MultiAttributeData> g =
 		// returnGraph("files/maps/dot/leuven-large-double-pruned.dot");
 		// Graph<MultiAttributeData> g =
@@ -116,11 +137,7 @@ public class ExperimentRunner {
 		// DotGraphIO.getMultiAttributeGraphIO().write(g,
 		// "files/maps/dot/leuven-large-double-pruned-second-center-WRONG.dot");
 
-		//Optional<String> dataset = Optional.absent();
-		Optional<String> dataset = Optional.of("files/datasets/0.50-20-1.00-0.scen");
-
-		performExperiment(graphPath, dataset);
-
+		//Optional<String> dataset = Optional.of("files/datasets/0.50-20-1.00-0.scen");
 	}
 
 	public static Graph<MultiAttributeData> returnGraph(String file) throws IOException {
@@ -128,11 +145,11 @@ public class ExperimentRunner {
 		return new ListenableGraph<MultiAttributeData>(dotGraphIO.read(file));
 	}
 
-	public static void readGraph(Graph<MultiAttributeData> g) {
+	public static void readGraph(Supplier<Graph<MultiAttributeData>> g) {
 		final Simulator simulator = Simulator.builder().addModel(DefaultPDPModel.builder())
-				.addModel(PDPRoadModel
-						.builder(RoadModelBuilders.dynamicGraph((ListenableGraph<?>) g)
-								.withSpeedUnit(NonSI.KILOMETERS_PER_HOUR).withDistanceUnit(SI.METER))
+				.addModel(PDPDynamicGraphRoadModel.builderForDynamicGraphRm(
+						RoadModelBuilders.dynamicGraph(ListenableGraph.supplier(g))
+								.withSpeedUnit(NonSI.KILOMETERS_PER_HOUR).withDistanceUnit(SI.KILOMETER))
 						.withAllowVehicleDiversion(true))
 				.addModel(View.builder().with(GraphRoadModelRenderer.builder().withNodeCircles()
 						// .withDirectionArrows()
@@ -142,25 +159,22 @@ public class ExperimentRunner {
 	}
 
 	public static void readGraph(String file) throws IOException {
-		DotGraphIO<MultiAttributeData> dotGraphIO = DotGraphIO.getMultiAttributeGraphIO(Filters.selfCycleFilter());
-		Graph<MultiAttributeData> g = dotGraphIO.read(file);
-
+		Supplier<Graph<MultiAttributeData>> g = DotGraphIO.getMultiAttributeDataGraphSupplier(file);
 		readGraph(g);
 	}
+	
+	public static void generateDataset(String graphPath, String dataset) {
+		DatasetGenerator.builder()
+			.withGraphSupplier(
+				DotGraphIO.getMultiAttributeDataGraphSupplier(graphPath))
+			.setNumInstances(1)
+			.setDatasetDir("files/datasets/" + dataset + "/")
+			.build()
+			.generate();
+	}
 
-	public static void performExperiment(String graphPath, Optional<String> dataset) {
-		Scenario s;
-		if (dataset.isPresent()) {
-			s = ScenarioIO.reader().apply(Paths.get(dataset.get()));
-		} else {
-			Iterator<Scenario> iS = DatasetGenerator.builder()
-					.withGraphSupplier(
-					DotGraphIO.getMultiAttributeDataGraphSupplier(graphPath))
-					.setNumInstances(1)
-					.setDatasetDir("files/datasets/").build().generate();
-			s = iS.next();
-
-		}
+	public static void performExperiment(String graphPath, String dataset) {
+		Scenario s = ScenarioIO.reader().apply(Paths.get("files/datasets/" + dataset + "/0.50-20-1.00-0.scen"));
 
 		// System.out.println(s.toString());
 		// Iterable<TimedEvent> events = generateHighTrafficEvents(graph);
