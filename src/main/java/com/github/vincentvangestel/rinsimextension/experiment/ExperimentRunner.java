@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -20,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import com.github.rinde.datgen.pdptw.DatasetGenerator;
 import com.github.rinde.logistics.pdptw.mas.TruckFactory.DefaultTruckFactory;
 import com.github.rinde.logistics.pdptw.mas.comm.AuctionCommModel;
-import com.github.rinde.logistics.pdptw.mas.comm.AuctionPanel;
 import com.github.rinde.logistics.pdptw.mas.comm.AuctionStopConditions;
 import com.github.rinde.logistics.pdptw.mas.comm.DoubleBid;
 import com.github.rinde.logistics.pdptw.mas.comm.RtSolverBidder;
@@ -52,13 +50,9 @@ import com.github.rinde.rinsim.pdptw.common.AddVehicleEvent;
 import com.github.rinde.rinsim.pdptw.common.ChangeConnectionSpeedEvent;
 import com.github.rinde.rinsim.pdptw.common.ObjectiveFunction;
 import com.github.rinde.rinsim.pdptw.common.PDPDynamicGraphRoadModel;
-import com.github.rinde.rinsim.pdptw.common.PDPRoadModel;
 import com.github.rinde.rinsim.pdptw.common.RouteFollowingVehicle;
-import com.github.rinde.rinsim.pdptw.common.RoutePanel;
-import com.github.rinde.rinsim.pdptw.common.RouteRenderer;
 import com.github.rinde.rinsim.pdptw.common.StatisticsDTO;
 import com.github.rinde.rinsim.pdptw.common.StatsTracker;
-import com.github.rinde.rinsim.pdptw.common.TimeLinePanel;
 import com.github.rinde.rinsim.scenario.Scenario;
 import com.github.rinde.rinsim.scenario.ScenarioIO;
 import com.github.rinde.rinsim.scenario.TimeOutEvent;
@@ -67,18 +61,22 @@ import com.github.rinde.rinsim.scenario.TimedEventHandler;
 import com.github.rinde.rinsim.scenario.gendreau06.Gendreau06ObjectiveFunction;
 import com.github.rinde.rinsim.ui.View;
 import com.github.rinde.rinsim.ui.renderers.GraphRoadModelRenderer;
-import com.github.rinde.rinsim.ui.renderers.PDPModelRenderer;
-import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
-import com.github.vincentvangestel.osmdot.OsmConverter;
-import com.github.vincentvangestel.osmdot.pruner.CenterPruner;
-import com.github.vincentvangestel.osmdot.pruner.RoundAboutPruner;
+import com.github.rinde.rinsim.util.StochasticSupplier;
 import com.github.vincentvangestel.rinsimextension.vehicle.Taxi;
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 
 public class ExperimentRunner {
+
+	
+	private static final int NUMBER_OF_SHOCKWAVES = 0;
+	private static final Optional<StochasticSupplier<Function<Long, Double>>> SHOCKWAVE_EXPANDING_SPEED = Optional.absent();
+	private static final Optional<StochasticSupplier<Function<Long, Double>>> SHOCKWAVE_RECEDING_SPEED = Optional.absent();
+	private static final Optional<StochasticSupplier<Function<Double, Double>>> SHOCKWAVE_BEHAVIOUR = Optional.absent();
+
 
 	/**
 	 * Usage: args = [ generate/experiment datasetID ]
@@ -86,6 +84,8 @@ public class ExperimentRunner {
 	 * @throws IOException
 	 */
 	public static void main(String[] args) throws IOException {
+		
+		//args = new String[]{ "g", "no_shockwaves"};
 		
 		if(args.length < 2) {
 			throw new IllegalArgumentException("Usage: args = [ g/e datasetID]");
@@ -169,6 +169,10 @@ public class ExperimentRunner {
 				DotGraphIO.getMultiAttributeDataGraphSupplier(graphPath))
 			.setNumInstances(1)
 			.setDatasetDir("files/datasets/" + dataset + "/")
+			.setNumberOfShockwaves(NUMBER_OF_SHOCKWAVES)
+			.setShockwaveExpandingSpeed(SHOCKWAVE_EXPANDING_SPEED)
+			.setShockwaveRecedingSpeed(SHOCKWAVE_RECEDING_SPEED)
+			.setShockwaveBehaviour(SHOCKWAVE_BEHAVIOUR)
 			.build()
 			.generate();
 	}
@@ -192,8 +196,8 @@ public class ExperimentRunner {
 		
 		
 		final ObjectiveFunction objFunc = Gendreau06ObjectiveFunction.instance(70);
-	    final long rpMs = 1000L;
-	    final long bMs = 10L;
+	    final long rpMs = 100L;
+	    final long bMs = 20L;
 	    final BidFunction bf = BidFunctions.BALANCED_HIGH;
 	    final String masSolverName =
 	    	      "Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation";
@@ -213,7 +217,7 @@ public class ExperimentRunner {
 			      .withRandomSeed(123)
 			      //.withThreads(1)
 			      .repeat(1)
-			      //.withWarmup(30000)
+			      .withWarmup(30000)
 			      //.addResultListener(new CommandLineProgress(System.out))
 			      .addResultListener(new VanLonHolvoetResultWriter(new File("files/results/result"), (Gendreau06ObjectiveFunction)objFunc))
 			      .usePostProcessor(new LogProcessor(objFunc))
@@ -248,7 +252,7 @@ public class ExperimentRunner {
 				.addModel(AuctionCommModel.builder(DoubleBid.class)
 						.withStopCondition(AuctionStopConditions.and(AuctionStopConditions.<DoubleBid>atLeastNumBids(2),
 								AuctionStopConditions.<DoubleBid>or(AuctionStopConditions.<DoubleBid>allBidders(),
-										AuctionStopConditions.<DoubleBid>maxAuctionDuration(5000))))
+										AuctionStopConditions.<DoubleBid>maxAuctionDuration(10000))))
 						.withMaxAuctionDuration(30 * 60 * 1000L))
 						//.withMaxAuctionDuration(5000L))
 				//.addModel(SolverModel.builder())
