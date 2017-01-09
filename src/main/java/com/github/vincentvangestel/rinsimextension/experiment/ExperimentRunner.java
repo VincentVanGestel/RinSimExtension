@@ -1,6 +1,7 @@
 package com.github.vincentvangestel.rinsimextension.experiment;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Paths;
@@ -201,7 +202,19 @@ public class ExperimentRunner {
 			      + System.getProperty("os.version") + " "
 			      + System.getProperty("os.arch"));
 		
-		Scenario s = ScenarioIO.reader().apply(Paths.get("files/datasets/" + dataset + "/0.50-20-1.00-0.scen"));
+		List<Scenario> scenarios = new ArrayList<>();
+		
+		File dir = new File("files/datasets/" + dataset + "/");
+		for(File f : dir.listFiles(new FilenameFilter()
+			{ 
+            	public boolean accept(File dir, String filename) {
+            		return filename.endsWith(".scen");
+            	}
+			})) {
+			scenarios.add(ScenarioIO.reader().apply(f.toPath()));
+		}
+		
+		//Scenario s = ScenarioIO.reader().apply(Paths.get("files/datasets/" + dataset + "/0.50-20-1.00-0.scen"));
 	
 		final ObjectiveFunction objFunc = Gendreau06ObjectiveFunction.instance(70);
 	    final long rpMs = 100L;
@@ -225,10 +238,10 @@ public class ExperimentRunner {
 			      .repeat(1)
 			      .withWarmup(30000)
 			      .addResultListener(new CommandLineProgress(System.out))
-			      .addResultListener(new VanLonHolvoetResultWriter(new File("files/results/result"), (Gendreau06ObjectiveFunction)objFunc))
+			      .addResultListener(new VanLonHolvoetResultWriter(new File("files/results/" + dataset), dataset, (Gendreau06ObjectiveFunction)objFunc))
 			      .usePostProcessor(new LogProcessor(objFunc))
 			      .addConfigurations(mainConfigs(opFfdFactory, objFunc))
-				.addScenario(s)
+				.addScenarios(scenarios)
 //				.addConfiguration(MASConfiguration.pdptwBuilder()
 //						.addEventHandler(AddDepotEvent.class, AddDepotEvent.defaultHandler())
 //				.addEventHandler(AddParcelEvent.class, AddParcelEvent.defaultHandler())

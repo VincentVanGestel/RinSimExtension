@@ -35,9 +35,12 @@ import com.google.common.io.Files;
  */
 public class VanLonHolvoetResultWriter extends ResultWriter {
 
+	String datasetID;
+	
   public VanLonHolvoetResultWriter(File target,
-      Gendreau06ObjectiveFunction objFunc) {
+      String dataset, Gendreau06ObjectiveFunction objFunc) {
     super(target, objFunc);
+    datasetID = dataset;
   }
 
   @Override
@@ -61,7 +64,7 @@ public class VanLonHolvoetResultWriter extends ResultWriter {
     try {
       final String scenarioName = Joiner.on("-").join(pc, id);
       final List<String> propsStrings = Files.readLines(new File(
-        "files/datasets/" + scenarioName
+        "files/datasets/" + datasetID + "/" + scenarioName
           + ".properties"),
         Charsets.UTF_8);
       final Map<String, String> properties = Splitter.on("\n")
