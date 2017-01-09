@@ -381,8 +381,9 @@ public class ExperimentRunner {
 												.<DoubleBid>maxAuctionDuration(maxAuctionDurationSoft))))
 						.withMaxAuctionDuration(30 * 60 * 1000L))
 				.addModel(RtSolverModel.builder()
-						.withThreadPoolSize(3)
-						.withThreadGrouping(true))
+//						.withThreadPoolSize(3)
+//						.withThreadGrouping(true)
+						)
 				.addModel(RealtimeClockLogger.builder());
 
 		if (computationsLogging) {
@@ -403,7 +404,8 @@ public class ExperimentRunner {
 		return MASConfiguration.pdptwBuilder()
 				.addModel(RtCentral.builder(opBuilder.buildRealtimeSolverSupplier())
 						.withContinuousUpdates(true)
-						.withThreadGrouping(true))
+//						.withThreadGrouping(true)
+						)
 				.addModel(RealtimeClockLogger.builder())
 				.addEventHandler(TimeOutEvent.class, TimeOutEvent.ignoreHandler())
 				.addEventHandler(AddDepotEvent.class, AddDepotEvent.defaultHandler())
