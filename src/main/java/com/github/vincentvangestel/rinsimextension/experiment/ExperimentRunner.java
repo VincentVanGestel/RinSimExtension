@@ -4,8 +4,8 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.Serializable;
-import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 import com.github.rinde.datgen.pdptw.DatasetGenerator;
 import com.github.rinde.logistics.pdptw.mas.TruckFactory.DefaultTruckFactory;
 import com.github.rinde.logistics.pdptw.mas.comm.AuctionCommModel;
-import com.github.rinde.logistics.pdptw.mas.comm.AuctionPanel;
 import com.github.rinde.logistics.pdptw.mas.comm.AuctionStopConditions;
 import com.github.rinde.logistics.pdptw.mas.comm.AuctionTimeStatsLogger;
 import com.github.rinde.logistics.pdptw.mas.comm.DoubleBid;
@@ -57,11 +56,8 @@ import com.github.rinde.rinsim.pdptw.common.ChangeConnectionSpeedEvent;
 import com.github.rinde.rinsim.pdptw.common.ObjectiveFunction;
 import com.github.rinde.rinsim.pdptw.common.PDPDynamicGraphRoadModel;
 import com.github.rinde.rinsim.pdptw.common.RouteFollowingVehicle;
-import com.github.rinde.rinsim.pdptw.common.RoutePanel;
-import com.github.rinde.rinsim.pdptw.common.RouteRenderer;
 import com.github.rinde.rinsim.pdptw.common.StatisticsDTO;
 import com.github.rinde.rinsim.pdptw.common.StatsTracker;
-import com.github.rinde.rinsim.pdptw.common.TimeLinePanel;
 import com.github.rinde.rinsim.scenario.Scenario;
 import com.github.rinde.rinsim.scenario.ScenarioIO;
 import com.github.rinde.rinsim.scenario.TimeOutEvent;
@@ -70,8 +66,6 @@ import com.github.rinde.rinsim.scenario.TimedEventHandler;
 import com.github.rinde.rinsim.scenario.gendreau06.Gendreau06ObjectiveFunction;
 import com.github.rinde.rinsim.ui.View;
 import com.github.rinde.rinsim.ui.renderers.GraphRoadModelRenderer;
-import com.github.rinde.rinsim.ui.renderers.PDPModelRenderer;
-import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
 import com.github.rinde.rinsim.util.StochasticSupplier;
 import com.github.vincentvangestel.rinsimextension.vehicle.Taxi;
 import com.google.auto.value.AutoValue;
@@ -91,27 +85,34 @@ public class ExperimentRunner {
 
 
 	/**
-	 * Usage: args = [ generate/experiment datasetID ]
+	 * Usage: args = [ generate/experiment datasetID #buckets bucketID]
 	 * @param args
 	 * @throws IOException
 	 */
 	public static void main(String[] args) throws IOException {
 		
-		//args = new String[]{ "g", "no_shockwaves"};
-		//args = new String[]{"e", "old"};
+		//args = new String[]{ "g", "no_shockwaves", "10", "1"};
+		//args = new String[]{"e", "old", "1", "1"};
 		
 		if(args.length < 2) {
-			throw new IllegalArgumentException("Usage: args = [ g/e datasetID]");
+			throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID]");
 		}
 		
 		String graphPath = new String("files/maps/dot/leuven-large-pruned.dot");
+
+		int numberOfBuckets = Integer.parseInt(args[2]);
+		int bucket = Integer.parseInt(args[3]);
 		
-		if(args[0].equalsIgnoreCase("g") || args[0].equalsIgnoreCase("generate")) {
-			generateDataset(graphPath, args[1].toLowerCase());
-		} else if(args[0].equalsIgnoreCase("e") || args[0].equalsIgnoreCase("experiment")) {
-			performExperiment(graphPath, args[1].toLowerCase());
+		if(bucket > numberOfBuckets || bucket < 1) {
+			throw new IllegalArgumentException("The bucket identifier should be a valid bucket (i.e. 1 <= bucketID <= #buckets)");
 		}
 		
+		if(args[0].equalsIgnoreCase("g") || args[0].equalsIgnoreCase("generate")) {
+			generateDataset(graphPath, args[1].toLowerCase(), numberOfBuckets, bucket);
+		} else if(args[0].equalsIgnoreCase("e") || args[0].equalsIgnoreCase("experiment")) {
+			performExperiment(graphPath, args[1].toLowerCase(), numberOfBuckets, bucket);
+		}
+
 		/**
 		 * Comment this if you don't want a new graph to be constructed!
 		 */
@@ -176,14 +177,15 @@ public class ExperimentRunner {
 		readGraph(g);
 	}
 	
-	public static void generateDataset(String graphPath, String dataset) {
+	public static void generateDataset(String graphPath, String dataset, int numberOfBuckets, int bucket) {
+		int numInstances = 10;
 		DatasetGenerator.builder()
 			.withGraphSupplier(
 				DotGraphIO.getMultiAttributeDataGraphSupplier(graphPath))
 		    .setDynamismLevels(Lists.newArrayList(.2, .5, .8))
 		    .setUrgencyLevels(Lists.newArrayList(20L))
 		    .setScaleLevels(Lists.newArrayList(5d))
-		    .setNumInstances(10)
+		    .setNumInstances((int)(numInstances/numberOfBuckets), (bucket - 1) * (int)(numInstances/numberOfBuckets))
 			.setDatasetDir("files/datasets/" + dataset + "/")
 			.setNumberOfShockwaves(NUMBER_OF_SHOCKWAVES)
 			.setShockwaveExpandingSpeed(SHOCKWAVE_EXPANDING_SPEED)
@@ -193,7 +195,7 @@ public class ExperimentRunner {
 			.generate();
 	}
 
-	public static void performExperiment(String graphPath, String dataset) {
+	public static void performExperiment(String graphPath, String dataset, int numberOfBuckets, int bucket) {
 		System.out.println(System.getProperty("java.vm.name") + ", "
 			      + System.getProperty("java.vm.vendor") + ", "
 			      + System.getProperty("java.vm.version") + " (runtime version: "
@@ -201,18 +203,26 @@ public class ExperimentRunner {
 		System.out.println(System.getProperty("os.name") + " "
 			      + System.getProperty("os.version") + " "
 			      + System.getProperty("os.arch"));
+		System.out.println("Performing experiment ");
 		
 		List<Scenario> scenarios = new ArrayList<>();
 		
 		File dir = new File("files/datasets/" + dataset + "/");
-		for(File f : dir.listFiles(new FilenameFilter()
-			{ 
-            	public boolean accept(File dir, String filename) {
-            		return filename.endsWith(".scen");
-            	}
-			})) {
+		File[] fileList = dir.listFiles(new FilenameFilter()
+		{ 
+        	public boolean accept(File dir, String filename) {
+        		return filename.endsWith(".scen");
+        	}
+		});
+		Arrays.sort(fileList);
+		int from = (bucket - 1) * (int)(fileList.length / numberOfBuckets);
+		int to = (bucket * (int)(fileList.length / numberOfBuckets));
+		System.out.println("Running Experiments from " + fileList[from].getName() + " to " + fileList[to-1].getName());
+		
+		for(File f : Arrays.copyOfRange(fileList, from, to)) {
 			scenarios.add(ScenarioIO.reader().apply(f.toPath()));
 		}
+
 		
 		//Scenario s = ScenarioIO.reader().apply(Paths.get("files/datasets/" + dataset + "/0.50-20-1.00-0.scen"));
 	
@@ -238,7 +248,10 @@ public class ExperimentRunner {
 			      .repeat(1)
 			      .withWarmup(30000)
 			      .addResultListener(new CommandLineProgress(System.out))
-			      .addResultListener(new VanLonHolvoetResultWriter(new File("files/results/" + dataset), dataset, (Gendreau06ObjectiveFunction)objFunc))
+			      .addResultListener(new VanLonHolvoetResultWriter(
+			    		  new File("files/results/" + dataset),
+			    		  dataset, bucket,
+			    		  (Gendreau06ObjectiveFunction)objFunc))
 			      .usePostProcessor(new LogProcessor(objFunc))
 			      .addConfigurations(mainConfigs(opFfdFactory, objFunc))
 				.addScenarios(scenarios)

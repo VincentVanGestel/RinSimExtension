@@ -7,7 +7,6 @@ import java.util.Iterator;
 import com.github.rinde.datgen.pdptw.DatasetGenerator;
 import com.github.rinde.logistics.pdptw.mas.TruckFactory.DefaultTruckFactory;
 import com.github.rinde.logistics.pdptw.mas.comm.AuctionCommModel;
-import com.github.rinde.logistics.pdptw.mas.comm.AuctionPanel;
 import com.github.rinde.logistics.pdptw.mas.comm.AuctionStopConditions;
 import com.github.rinde.logistics.pdptw.mas.comm.DoubleBid;
 import com.github.rinde.logistics.pdptw.mas.comm.RandomBidder;
@@ -22,16 +21,12 @@ import com.github.rinde.rinsim.pdptw.common.AddParcelEvent;
 import com.github.rinde.rinsim.pdptw.common.AddVehicleEvent;
 import com.github.rinde.rinsim.pdptw.common.ChangeConnectionSpeedEvent;
 import com.github.rinde.rinsim.pdptw.common.RouteFollowingVehicle;
-import com.github.rinde.rinsim.pdptw.common.RoutePanel;
-import com.github.rinde.rinsim.pdptw.common.TimeLinePanel;
 import com.github.rinde.rinsim.scenario.Scenario;
 import com.github.rinde.rinsim.scenario.ScenarioConverters;
 import com.github.rinde.rinsim.scenario.ScenarioIO;
 import com.github.rinde.rinsim.scenario.TimeOutEvent;
 import com.github.rinde.rinsim.ui.View;
 import com.github.rinde.rinsim.ui.renderers.GraphRoadModelRenderer;
-import com.github.rinde.rinsim.ui.renderers.PDPModelRenderer;
-import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
 import com.google.common.base.Optional;
 
 public class GifMaker {
@@ -54,7 +49,7 @@ public class GifMaker {
 			Iterator<Scenario> iS = DatasetGenerator.builder()
 					.withGraphSupplier(
 					DotGraphIO.getMultiAttributeDataGraphSupplier(graphPath))
-					.setNumInstances(1)
+					.setNumInstances(1,1)
 					.setDatasetDir("files/datasets/").build().generate();
 			s = iS.next();
 

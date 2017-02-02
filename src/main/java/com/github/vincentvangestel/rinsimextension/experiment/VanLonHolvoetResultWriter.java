@@ -36,11 +36,13 @@ import com.google.common.io.Files;
 public class VanLonHolvoetResultWriter extends ResultWriter {
 
 	String datasetID;
+	int bucketID;
 	
   public VanLonHolvoetResultWriter(File target,
-      String dataset, Gendreau06ObjectiveFunction objFunc) {
+      String dataset, int bucket, Gendreau06ObjectiveFunction objFunc) {
     super(target, objFunc);
     datasetID = dataset;
+    bucketID = bucket;
   }
 
   @Override
