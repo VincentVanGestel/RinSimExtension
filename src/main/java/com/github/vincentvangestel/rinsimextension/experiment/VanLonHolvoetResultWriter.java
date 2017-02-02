@@ -48,7 +48,7 @@ public class VanLonHolvoetResultWriter extends ResultWriter {
   @Override
   public void receive(SimulationResult result) {
     final String configName = result.getSimArgs().getMasConfig().getName();
-    final File targetFile = new File(experimentDirectory, configName + ".csv");
+    final File targetFile = new File(experimentDirectory, configName + "--" + bucketID + ".csv");
 
     if (!targetFile.exists()) {
       createCSVWithHeader(targetFile);
