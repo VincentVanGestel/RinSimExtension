@@ -250,7 +250,7 @@ public class ExperimentRunner {
 			      .withRandomSeed(123)
 			      //.withThreads(1)
 			      .repeat(1)
-			      .withWarmup(30000)
+			      //.withWarmup(30000)
 			      .addResultListener(new CommandLineProgress(System.out))
 			      .addResultListener(new VanLonHolvoetResultWriter(
 			    		  new File("files/results/" + dataset),
