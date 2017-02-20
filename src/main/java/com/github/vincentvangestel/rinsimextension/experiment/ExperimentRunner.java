@@ -94,7 +94,7 @@ public class ExperimentRunner {
 		
 		//args = new String[]{ "g", "no_shockwaves", "10", "1"};
 		//args = new String[]{"e", "old", "1", "1"};
-		args = new String[]{"g", "bucket", "10", "5"};
+		//args = new String[]{"g", "bucket", "10", "5"};
 		
 		if(args.length < 2) {
 			throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID]");
