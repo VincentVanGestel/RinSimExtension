@@ -45,6 +45,7 @@ import com.github.rinde.rinsim.experiment.ExperimentResults;
 import com.github.rinde.rinsim.experiment.MASConfiguration;
 import com.github.rinde.rinsim.experiment.PostProcessor;
 import com.github.rinde.rinsim.geom.Graph;
+import com.github.rinde.rinsim.geom.GraphHeuristics;
 import com.github.rinde.rinsim.geom.ListenableGraph;
 import com.github.rinde.rinsim.geom.MultiAttributeData;
 import com.github.rinde.rinsim.geom.io.DotGraphIO;
@@ -93,6 +94,7 @@ public class ExperimentRunner {
 		
 		//args = new String[]{ "g", "no_shockwaves", "10", "1"};
 		//args = new String[]{"e", "old", "1", "1"};
+		args = new String[]{"g", "bucket", "10", "5"};
 		
 		if(args.length < 2) {
 			throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID]");
@@ -182,7 +184,8 @@ public class ExperimentRunner {
 		DatasetGenerator.builder()
 			.withGraphSupplier(
 				DotGraphIO.getMultiAttributeDataGraphSupplier(graphPath))
-		    .setDynamismLevels(Lists.newArrayList(.2, .5, .8))
+		    //.setDynamismLevels(Lists.newArrayList(.2, .5, .8))
+			.setDynamismLevels(Lists.newArrayList(.5))
 		    .setUrgencyLevels(Lists.newArrayList(20L))
 		    .setScaleLevels(Lists.newArrayList(5d))
 		    .setNumInstances((int)(numInstances/numberOfBuckets), (bucket - 1) * (int)(numInstances/numberOfBuckets))
@@ -234,7 +237,8 @@ public class ExperimentRunner {
 	    	      "Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation";
 	    
 	    final OptaplannerSolvers.Builder opFfdFactory =
-	    	      OptaplannerSolvers.builder();
+	    	      OptaplannerSolvers.builder()
+	    	      	.withSolverHeuristic(GraphHeuristics.time(70d));
 	    	      //.withSolverXmlResource(
 	    	      //  "com/github/rinde/jaamas16/jaamas-solver.xml")
 	    	      //.withUnimprovedMsLimit(rpMs)
@@ -242,7 +246,7 @@ public class ExperimentRunner {
 	    	      //.withObjectiveFunction(objFunc);
 		
 		ExperimentResults results = Experiment.builder()
-			      .computeLocal()
+				  .computeDistributed()
 			      .withRandomSeed(123)
 			      //.withThreads(1)
 			      .repeat(1)
@@ -343,19 +347,18 @@ public class ExperimentRunner {
 		final String masSolverName =
 				"Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation";
 
-		final String suffix;
+		final StringBuilder suffix = new StringBuilder();
 		if (false == enableReauctions) {
-			suffix = "-NO-REAUCT";
+			suffix.append("-NO-REAUCT");
 		} else if (reauctCooldownPeriodMs > 0) {
-			suffix = "-reauctCooldownPeriod-" + reauctCooldownPeriodMs;
-		} else {
-			suffix = "";
+			suffix.append("-reauctCooldownPeriod-" + reauctCooldownPeriodMs);
 		}
+		suffix.append("-heuristic-" + opFfdFactory.getSolverHeuristic().toString());
 
 		MASConfiguration.Builder b = MASConfiguration.pdptwBuilder()
 				.setName(
 						"ReAuction-FFD-" + masSolverName + "-RP-" + rpMs + "-BID-" + bMs + "-"
-								+ bf + suffix)
+								+ bf + suffix.toString())
 				.addEventHandler(TimeOutEvent.class, TimeOutEvent.ignoreHandler())
 				.addEventHandler(AddDepotEvent.class, AddDepotEvent.defaultHandler())
 				.addEventHandler(AddParcelEvent.class, AddParcelEvent.defaultHandler())
