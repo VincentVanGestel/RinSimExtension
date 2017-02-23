@@ -81,4 +81,6 @@ import javax.annotation.Generated;
     return h;
   }
 
+  private static final long serialVersionUID = -597628566631371202L;
+
 }

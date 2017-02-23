@@ -44,6 +44,7 @@ import com.github.rinde.rinsim.experiment.Experiment.SimArgs;
 import com.github.rinde.rinsim.experiment.ExperimentResults;
 import com.github.rinde.rinsim.experiment.MASConfiguration;
 import com.github.rinde.rinsim.experiment.PostProcessor;
+import com.github.rinde.rinsim.experiment.PostProcessors;
 import com.github.rinde.rinsim.geom.Graph;
 import com.github.rinde.rinsim.geom.GraphHeuristics;
 import com.github.rinde.rinsim.geom.ListenableGraph;
@@ -58,7 +59,6 @@ import com.github.rinde.rinsim.pdptw.common.ObjectiveFunction;
 import com.github.rinde.rinsim.pdptw.common.PDPDynamicGraphRoadModel;
 import com.github.rinde.rinsim.pdptw.common.RouteFollowingVehicle;
 import com.github.rinde.rinsim.pdptw.common.StatisticsDTO;
-import com.github.rinde.rinsim.pdptw.common.StatsTracker;
 import com.github.rinde.rinsim.scenario.Scenario;
 import com.github.rinde.rinsim.scenario.ScenarioIO;
 import com.github.rinde.rinsim.scenario.TimeOutEvent;
@@ -93,14 +93,14 @@ public class ExperimentRunner {
 	public static void main(String[] args) throws IOException {
 		
 		//args = new String[]{ "g", "no_shockwaves", "10", "1"};
-		//args = new String[]{"e", "old", "1", "1"};
+		//args = new String[]{"e", "no-shockwaves-multiple", "30", "1"};
 		//args = new String[]{"g", "bucket", "10", "5"};
 		
 		if(args.length < 2) {
 			throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID]");
 		}
 		
-		String graphPath = new String("files/maps/dot/leuven-large-pruned.dot");
+		String graphPath = new String("/home/vincent/Dropbox/UNI/Thesis/eclipse_workspace/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
 
 		int numberOfBuckets = Integer.parseInt(args[2]);
 		int bucket = Integer.parseInt(args[3]);
@@ -112,7 +112,7 @@ public class ExperimentRunner {
 		if(args[0].equalsIgnoreCase("g") || args[0].equalsIgnoreCase("generate")) {
 			generateDataset(graphPath, args[1].toLowerCase(), numberOfBuckets, bucket);
 		} else if(args[0].equalsIgnoreCase("e") || args[0].equalsIgnoreCase("experiment")) {
-			performExperiment(graphPath, args[1].toLowerCase(), numberOfBuckets, bucket);
+			performExperiment(args[1].toLowerCase(), numberOfBuckets, bucket);
 		}
 
 		/**
@@ -198,7 +198,7 @@ public class ExperimentRunner {
 			.generate();
 	}
 
-	public static void performExperiment(String graphPath, String dataset, int numberOfBuckets, int bucket) {
+	public static void performExperiment(String dataset, int numberOfBuckets, int bucket) {
 		System.out.println(System.getProperty("java.vm.name") + ", "
 			      + System.getProperty("java.vm.vendor") + ", "
 			      + System.getProperty("java.vm.version") + " (runtime version: "
@@ -226,7 +226,6 @@ public class ExperimentRunner {
 			scenarios.add(ScenarioIO.reader().apply(f.toPath()));
 		}
 
-		
 		//Scenario s = ScenarioIO.reader().apply(Paths.get("files/datasets/" + dataset + "/0.50-20-1.00-0.scen"));
 	
 		final ObjectiveFunction objFunc = Gendreau06ObjectiveFunction.instance(70);
@@ -244,9 +243,11 @@ public class ExperimentRunner {
 	    	      //.withUnimprovedMsLimit(rpMs)
 	    	      //.withName(masSolverName)
 	    	      //.withObjectiveFunction(objFunc);
-		
+
 		ExperimentResults results = Experiment.builder()
-				  .computeDistributed()
+				//.computeLocal()  
+				.computeDistributed()
+				  .numBatches(1)
 			      .withRandomSeed(123)
 			      //.withThreads(1)
 			      .repeat(1)
@@ -314,6 +315,8 @@ public class ExperimentRunner {
 //							.withAutoClose())
 		
 				.perform();
+		
+		System.out.println(results.toString());
 		
 	}
 
@@ -471,8 +474,10 @@ public class ExperimentRunner {
 	}
 
 	  @AutoValue
-	  abstract static class AuctionStats {
-	    abstract int getNumParcels();
+	  abstract static class AuctionStats implements Serializable {
+		private static final long serialVersionUID = -597628566631371202L;
+
+		abstract int getNumParcels();
 
 	    abstract int getNumReauctions();
 
@@ -514,9 +519,9 @@ public class ExperimentRunner {
 	 static class LogProcessor
       implements PostProcessor<ExperimentInfo>, Serializable {
     private static final long serialVersionUID = 5997690791395717045L;
-    ObjectiveFunction objectiveFunction;
+    static ObjectiveFunction objectiveFunction;
     
-	Logger LOGGER = LoggerFactory.getLogger("LogProcessor");
+	static final Logger LOGGER = LoggerFactory.getLogger("LogProcessor");
 
     LogProcessor(ObjectiveFunction objFunc) {
       objectiveFunction = objFunc;
@@ -546,20 +551,20 @@ public class ExperimentRunner {
       }
 
       final StatisticsDTO stats =
-    	        sim.getModelProvider().getModel(StatsTracker.class).getStatistics();
-      //  PostProcessors.statisticsPostProcessor(objectiveFunction)
-      //    .collectResults(sim, args);
+//    	        sim.getModelProvider().getModel(StatsTracker.class).getStatistics();
+        PostProcessors.statisticsPostProcessor(objectiveFunction)
+          .collectResults(sim, args);
 
       LOGGER.info("success: {}", args);
       
-      if(aStats.isPresent()) {
-    	  System.out.println("Num Parcels: " + aStats.get().getNumParcels());
-      	  System.out.println("Num Reauctions: " + aStats.get().getNumReauctions());
-      	  System.out.println("Num Unsuccessful Reauctions: " + aStats.get().getNumUnsuccesfulReauctions());
-      	  System.out.println("Num Failed Reauctions: " + aStats.get().getNumFailedReauctions());
-      }
-      
-      System.out.println(stats.toString());
+//      if(aStats.isPresent()) {
+//    	  System.out.println("Num Parcels: " + aStats.get().getNumParcels());
+//      	  System.out.println("Num Reauctions: " + aStats.get().getNumReauctions());
+//      	  System.out.println("Num Unsuccessful Reauctions: " + aStats.get().getNumUnsuccesfulReauctions());
+//      	  System.out.println("Num Failed Reauctions: " + aStats.get().getNumFailedReauctions());
+//      }
+//      
+//      System.out.println(stats.toString());
       
       if (logger == null) {
         return ExperimentInfo.create(new ArrayList<LogEntry>(), 0,
