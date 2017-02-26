@@ -44,9 +44,8 @@ import com.github.rinde.rinsim.experiment.Experiment.SimArgs;
 import com.github.rinde.rinsim.experiment.ExperimentResults;
 import com.github.rinde.rinsim.experiment.MASConfiguration;
 import com.github.rinde.rinsim.experiment.PostProcessor;
-import com.github.rinde.rinsim.experiment.PostProcessors;
+import com.github.rinde.rinsim.geom.GeomHeuristics;
 import com.github.rinde.rinsim.geom.Graph;
-import com.github.rinde.rinsim.geom.GraphHeuristics;
 import com.github.rinde.rinsim.geom.ListenableGraph;
 import com.github.rinde.rinsim.geom.MultiAttributeData;
 import com.github.rinde.rinsim.geom.io.DotGraphIO;
@@ -59,6 +58,7 @@ import com.github.rinde.rinsim.pdptw.common.ObjectiveFunction;
 import com.github.rinde.rinsim.pdptw.common.PDPDynamicGraphRoadModel;
 import com.github.rinde.rinsim.pdptw.common.RouteFollowingVehicle;
 import com.github.rinde.rinsim.pdptw.common.StatisticsDTO;
+import com.github.rinde.rinsim.pdptw.common.StatsTracker;
 import com.github.rinde.rinsim.scenario.Scenario;
 import com.github.rinde.rinsim.scenario.ScenarioIO;
 import com.github.rinde.rinsim.scenario.TimeOutEvent;
@@ -92,7 +92,7 @@ public class ExperimentRunner {
 	 */
 	public static void main(String[] args) throws IOException {
 		
-		//args = new String[]{ "g", "no_shockwaves", "10", "1"};
+		args = new String[]{ "e", "easy", "1", "1"};
 		//args = new String[]{"e", "no-shockwaves-multiple", "30", "1"};
 		//args = new String[]{"g", "bucket", "10", "5"};
 		
@@ -184,7 +184,8 @@ public class ExperimentRunner {
 		DatasetGenerator.builder()
 			.withGraphSupplier(
 				DotGraphIO.getMultiAttributeDataGraphSupplier(graphPath))
-		    //.setDynamismLevels(Lists.newArrayList(.2, .5, .8))
+		    .setDynamismLevels(Lists.newArrayList(.2, .5, .8))
+			.setScenarioLength(4)
 			.setDynamismLevels(Lists.newArrayList(.5))
 		    .setUrgencyLevels(Lists.newArrayList(20L))
 		    .setScaleLevels(Lists.newArrayList(5d))
@@ -237,7 +238,7 @@ public class ExperimentRunner {
 	    
 	    final OptaplannerSolvers.Builder opFfdFactory =
 	    	      OptaplannerSolvers.builder()
-	    	      	.withSolverHeuristic(GraphHeuristics.time(70d));
+	    	      	.withSolverHeuristic(GeomHeuristics.time(70d));
 	    	      //.withSolverXmlResource(
 	    	      //  "com/github/rinde/jaamas16/jaamas-solver.xml")
 	    	      //.withUnimprovedMsLimit(rpMs)
@@ -317,7 +318,7 @@ public class ExperimentRunner {
 				.perform();
 		
 		System.out.println(results.toString());
-		
+		System.exit(0);
 	}
 
 	static List<MASConfiguration> mainConfigs(
@@ -551,9 +552,9 @@ public class ExperimentRunner {
       }
 
       final StatisticsDTO stats =
-//    	        sim.getModelProvider().getModel(StatsTracker.class).getStatistics();
-        PostProcessors.statisticsPostProcessor(objectiveFunction)
-          .collectResults(sim, args);
+    	        sim.getModelProvider().getModel(StatsTracker.class).getStatistics();
+//        PostProcessors.statisticsPostProcessor(objectiveFunction)
+//          .collectResults(sim, args);
 
       LOGGER.info("success: {}", args);
       
