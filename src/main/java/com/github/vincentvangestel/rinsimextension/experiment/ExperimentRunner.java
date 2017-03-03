@@ -117,8 +117,9 @@ public class ExperimentRunner {
 			throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID {Generate Options}]");
 		}
 		
-		String graphPath = new String("/home/vincent/Dropbox/UNI/Thesis/eclipse_workspace/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
-
+		//String graphPath = new String("/home/vincent/Dropbox/UNI/Thesis/eclipse_workspace/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
+		String graphPath = new String("/home/r0373187/Thesis/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
+		
 		int numberOfBuckets = Integer.parseInt(args[2]);
 		int bucket = Integer.parseInt(args[3]);
 		
