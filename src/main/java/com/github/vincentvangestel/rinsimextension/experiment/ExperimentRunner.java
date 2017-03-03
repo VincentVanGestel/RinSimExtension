@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -44,6 +45,7 @@ import com.github.rinde.rinsim.experiment.Experiment.SimArgs;
 import com.github.rinde.rinsim.experiment.ExperimentResults;
 import com.github.rinde.rinsim.experiment.MASConfiguration;
 import com.github.rinde.rinsim.experiment.PostProcessor;
+import com.github.rinde.rinsim.experiment.PostProcessors;
 import com.github.rinde.rinsim.geom.GeomHeuristics;
 import com.github.rinde.rinsim.geom.Graph;
 import com.github.rinde.rinsim.geom.ListenableGraph;
@@ -58,7 +60,6 @@ import com.github.rinde.rinsim.pdptw.common.ObjectiveFunction;
 import com.github.rinde.rinsim.pdptw.common.PDPDynamicGraphRoadModel;
 import com.github.rinde.rinsim.pdptw.common.RouteFollowingVehicle;
 import com.github.rinde.rinsim.pdptw.common.StatisticsDTO;
-import com.github.rinde.rinsim.pdptw.common.StatsTracker;
 import com.github.rinde.rinsim.scenario.Scenario;
 import com.github.rinde.rinsim.scenario.ScenarioIO;
 import com.github.rinde.rinsim.scenario.TimeOutEvent;
@@ -68,6 +69,7 @@ import com.github.rinde.rinsim.scenario.gendreau06.Gendreau06ObjectiveFunction;
 import com.github.rinde.rinsim.ui.View;
 import com.github.rinde.rinsim.ui.renderers.GraphRoadModelRenderer;
 import com.github.rinde.rinsim.util.StochasticSupplier;
+import com.github.rinde.rinsim.util.StochasticSuppliers;
 import com.github.vincentvangestel.rinsimextension.vehicle.Taxi;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Function;
@@ -78,12 +80,26 @@ import com.google.common.collect.Lists;
 
 public class ExperimentRunner {
 
-	
-	private static final int NUMBER_OF_SHOCKWAVES = 0;
-	private static final Optional<StochasticSupplier<Function<Long, Double>>> SHOCKWAVE_EXPANDING_SPEED = Optional.absent();
-	private static final Optional<StochasticSupplier<Function<Long, Double>>> SHOCKWAVE_RECEDING_SPEED = Optional.absent();
-	private static final Optional<StochasticSupplier<Function<Double, Double>>> SHOCKWAVE_BEHAVIOUR = Optional.absent();
+	private static final int SCENARIO_LENGTH_HOURS = 4;
+	private static final int NUM_INSTANCES = 10;
+	private static final long MS_IN_MIN = 60000L;
+	private static final long MS_IN_H = 60 * MS_IN_MIN;
+	private static final double TWENTYFIVE_KMH_IN_KMS = 0.00694444444;
+	private static final Function<Long, Double> DEFAULT_SPEED_FUNCTION =
+			new Function<Long, Double>() {
+		@Override
+		public Double apply(Long input) {
+			return TWENTYFIVE_KMH_IN_KMS;
+		}
+	};
 
+	
+	private static List<Integer> numberOfShockwaves = new ArrayList<Integer>();
+	private static Optional<List<StochasticSupplier<Function<Long, Double>>>> shockwaveExpandingSpeeds = Optional.absent();
+	private static Optional<List<StochasticSupplier<Function<Long, Double>>>> shockwaveRecedingSpeeds = Optional.absent();
+	private static Optional<List<StochasticSupplier<Function<Double, Double>>>> shockwaveBehaviors = Optional.absent();
+	private static Optional<List<StochasticSupplier<Long>>> shockwaveDurations = Optional.absent();
+	private static Optional<List<StochasticSupplier<Long>>> shockwaveCreationTimes = Optional.absent();
 
 	/**
 	 * Usage: args = [ generate/experiment datasetID #buckets bucketID]
@@ -92,12 +108,13 @@ public class ExperimentRunner {
 	 */
 	public static void main(String[] args) throws IOException {
 		
-		args = new String[]{ "e", "easy", "1", "1"};
+		//args = new String[]{ "e", "easy", "1", "1"};
 		//args = new String[]{"e", "no-shockwaves-multiple", "30", "1"};
 		//args = new String[]{"g", "bucket", "10", "5"};
+		//args = new String[]{"g", "generateTest", "10", "5", "4,1", "3600000,7200000", "0.5,2", "0.5,0.2"};
 		
 		if(args.length < 2) {
-			throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID]");
+			throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID {Generate Options}]");
 		}
 		
 		String graphPath = new String("/home/vincent/Dropbox/UNI/Thesis/eclipse_workspace/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
@@ -110,9 +127,33 @@ public class ExperimentRunner {
 		}
 		
 		if(args[0].equalsIgnoreCase("g") || args[0].equalsIgnoreCase("generate")) {
+			if(args.length < 8) {
+				throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID {#shockwaves,*} {shockwaveDuration,*} {shockwaveDistance,*} {shockwaveImpact,*}]");
+			}
+			numberOfShockwaves = parseNumberOfShockwaves(args[4]);
+			shockwaveDurations = parseShockwaveDuration(args[5]);
+			
+			shockwaveBehaviors = parseShockwaveBehavior(args[6], args[7]);
+			
+			shockwaveCreationTimes = Optional.of(
+					Collections.nCopies(
+							numberOfShockwaves.size(),
+							StochasticSuppliers.uniformLong(0, (int)(SCENARIO_LENGTH_HOURS * MS_IN_H))));
+			
+			shockwaveExpandingSpeeds = defaultShockwaveSpeed(numberOfShockwaves.size());
+			shockwaveRecedingSpeeds = shockwaveExpandingSpeeds;
+			
+			System.out.println("> Generating " + (int)(NUM_INSTANCES/numberOfBuckets) * 3 + " instances of Datasets with shockwave parameters:");
+			System.out.println("  - Number of shockwaves: " + numberOfShockwaves.toString());
+			System.out.println("  - Shockwave Durations: " + shockwaveDurations.get().toString());
+			System.out.println("  - Shockwave Size: [" + args[6] + "]");
+			System.out.println("  - Shockwave Impacts: [" + args[7] + "]");
+			
 			generateDataset(graphPath, args[1].toLowerCase(), numberOfBuckets, bucket);
 		} else if(args[0].equalsIgnoreCase("e") || args[0].equalsIgnoreCase("experiment")) {
 			performExperiment(args[1].toLowerCase(), numberOfBuckets, bucket);
+		} else {
+			throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID {Generate Options}]");
 		}
 
 		/**
@@ -156,6 +197,58 @@ public class ExperimentRunner {
 		//Optional<String> dataset = Optional.of("files/datasets/0.50-20-1.00-0.scen");
 	}
 
+	private static Optional<List<StochasticSupplier<Function<Double, Double>>>> parseShockwaveBehavior(String distanceListString,
+			String impactListString) {
+		String[] distances = distanceListString.split(",");
+		String[] impacts = impactListString.split(",");
+		
+		if(distances.length != impacts.length) {
+			throw new IllegalArgumentException("The Generate Options should all have the same size!");
+		}
+		
+		List<StochasticSupplier<Function<Double,Double>>> behaviors = new ArrayList<>();
+		
+		for(int i = 0; i < distances.length; i++) {
+			final double distance = Double.parseDouble(distances[i]);
+			final double impact = Double.parseDouble(impacts[i]);
+			
+			behaviors.add(StochasticSuppliers.constant(new Function<Double,Double>() {
+				@Override
+				public Double apply(Double input) {
+					if(input >= distance) {
+						return 1d;
+					} else {
+						return impact;
+					}
+				}
+			}));
+		}
+
+		return Optional.of(behaviors);
+	}
+
+	private static Optional<List<StochasticSupplier<Function<Long, Double>>>> defaultShockwaveSpeed(int size) {
+		return Optional.of(Collections.nCopies(size, StochasticSuppliers.constant(DEFAULT_SPEED_FUNCTION)));
+	}
+
+	private static List<Integer> parseNumberOfShockwaves(String numberOfShockwavesListString) {
+		String[] numberOfShockwavesStrings = numberOfShockwavesListString.split(",");
+		List<Integer> numberOfShockwaves = new ArrayList<>();
+		for(String numberOfShockwavesString : numberOfShockwavesStrings) {
+			numberOfShockwaves.add(Integer.parseInt(numberOfShockwavesString));
+		}
+		return numberOfShockwaves;
+	}
+
+	private static Optional<List<StochasticSupplier<Long>>> parseShockwaveDuration(String shockwaveDurationsListString) {
+		String[] shockwaveDurationStrings = shockwaveDurationsListString.split(",");
+		List<StochasticSupplier<Long>> shockwaveDurations = new ArrayList<>();
+		for(String shockwaveDuration : shockwaveDurationStrings) {
+			shockwaveDurations.add(StochasticSuppliers.constant(Long.parseLong(shockwaveDuration)));
+		}
+		return Optional.of(shockwaveDurations);
+	}	
+
 	public static Graph<MultiAttributeData> returnGraph(String file) throws IOException {
 		DotGraphIO<MultiAttributeData> dotGraphIO = DotGraphIO.getMultiAttributeGraphIO(Filters.selfCycleFilter());
 		return new ListenableGraph<MultiAttributeData>(dotGraphIO.read(file));
@@ -180,21 +273,22 @@ public class ExperimentRunner {
 	}
 	
 	public static void generateDataset(String graphPath, String dataset, int numberOfBuckets, int bucket) {
-		int numInstances = 10;
 		DatasetGenerator.builder()
 			.withGraphSupplier(
 				DotGraphIO.getMultiAttributeDataGraphSupplier(graphPath))
 		    .setDynamismLevels(Lists.newArrayList(.2, .5, .8))
-			.setScenarioLength(4)
+			.setScenarioLength(SCENARIO_LENGTH_HOURS)
 			.setDynamismLevels(Lists.newArrayList(.5))
 		    .setUrgencyLevels(Lists.newArrayList(20L))
 		    .setScaleLevels(Lists.newArrayList(5d))
-		    .setNumInstances((int)(numInstances/numberOfBuckets), (bucket - 1) * (int)(numInstances/numberOfBuckets))
+		    .setNumInstances((int)(NUM_INSTANCES/numberOfBuckets), (bucket - 1) * (int)(NUM_INSTANCES/numberOfBuckets))
 			.setDatasetDir("files/datasets/" + dataset + "/")
-			.setNumberOfShockwaves(NUMBER_OF_SHOCKWAVES)
-			.setShockwaveExpandingSpeed(SHOCKWAVE_EXPANDING_SPEED)
-			.setShockwaveRecedingSpeed(SHOCKWAVE_RECEDING_SPEED)
-			.setShockwaveBehaviour(SHOCKWAVE_BEHAVIOUR)
+			.setNumberOfShockwaves(numberOfShockwaves)
+			.setShockwaveExpandingSpeed(shockwaveExpandingSpeeds)
+			.setShockwaveRecedingSpeed(shockwaveRecedingSpeeds)
+			.setShockwaveBehaviour(shockwaveBehaviors)
+			.setShockwaveDuration(shockwaveDurations)
+			.setShockwaveCreationTimes(shockwaveCreationTimes)
 			.build()
 			.generate();
 	}
@@ -520,7 +614,7 @@ public class ExperimentRunner {
 	 static class LogProcessor
       implements PostProcessor<ExperimentInfo>, Serializable {
     private static final long serialVersionUID = 5997690791395717045L;
-    static ObjectiveFunction objectiveFunction;
+    private final ObjectiveFunction objectiveFunction;
     
 	static final Logger LOGGER = LoggerFactory.getLogger("LogProcessor");
 
@@ -552,9 +646,9 @@ public class ExperimentRunner {
       }
 
       final StatisticsDTO stats =
-    	        sim.getModelProvider().getModel(StatsTracker.class).getStatistics();
-//        PostProcessors.statisticsPostProcessor(objectiveFunction)
-//          .collectResults(sim, args);
+//    	        sim.getModelProvider().getModel(StatsTracker.class).getStatistics();
+        PostProcessors.statisticsPostProcessor(objectiveFunction)
+          .collectResults(sim, args);
 
       LOGGER.info("success: {}", args);
       
