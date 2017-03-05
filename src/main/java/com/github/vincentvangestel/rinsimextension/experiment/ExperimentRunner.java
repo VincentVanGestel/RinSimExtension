@@ -120,10 +120,9 @@ public class ExperimentRunner {
 		
 		//args = new String[]{ "e", "easy", "1", "1"};
 		//args = new String[]{"e", "no-shockwaves-multiple", "30", "1"};
-		//args = new String[]{"g", "bucket", "10", "5"};
-		//args = new String[]{"g", "generateTest", "10", "1", "16", "1800000", "3", "0.5"};
-		//args = new String[]{"g", "generateTest", "10", "2", "32", "900000", "3", "0.5"};
-		//args = new String[]{"v", "generateTest", "10", "2"};		
+		//args = new String[]{"g", "generateTest", "10", "1", "false", "16", "1800000", "3", "0.5"};
+		//args = new String[]{"g", "generateTest", "10", "3", "true", "32", "900000", "3", "0.5"};
+		//args = new String[]{"v", "generateTest", "10", "0"};		
 		
 		if(args.length < 2) {
 			throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID {Generate Options}]");
@@ -145,13 +144,14 @@ public class ExperimentRunner {
 		}
 		
 		if(args[0].equalsIgnoreCase("g") || args[0].equalsIgnoreCase("generate")) {
-			if(args.length < 8) {
-				throw new IllegalArgumentException("Usage: args = [ g/e/v datasetID #buckets bucketID {#shockwaves,*} {shockwaveDuration,*} {shockwaveDistance,*} {shockwaveImpact,*}]");
+			if(args.length < 9) {
+				throw new IllegalArgumentException("Usage: args = [ g/e/v datasetID #buckets bucketID {cached} {#shockwaves,*} {shockwaveDuration,*} {shockwaveDistance,*} {shockwaveImpact,*}]");
 			}
-			numberOfShockwaves = parseNumberOfShockwaves(args[4]);
-			shockwaveDurations = parseShockwaveDuration(args[5]);
+			boolean cached = Boolean.parseBoolean(args[4]);
+			numberOfShockwaves = parseNumberOfShockwaves(args[5]);
+			shockwaveDurations = parseShockwaveDuration(args[6]);
 			
-			shockwaveBehaviors = parseShockwaveBehavior(args[6], args[7]);
+			shockwaveBehaviors = parseShockwaveBehavior(args[7], args[8]);
 			
 			shockwaveCreationTimes = Optional.of(
 					Collections.nCopies(
@@ -162,12 +162,13 @@ public class ExperimentRunner {
 			shockwaveRecedingSpeeds = shockwaveExpandingSpeeds;
 			
 			System.out.println("> Generating " + (int)(NUM_INSTANCES/numberOfBuckets) * 3 + " instances of Datasets with shockwave parameters:");
+			System.out.println("  - With a cached road model: " + cached);
 			System.out.println("  - Number of shockwaves: " + numberOfShockwaves.toString());
 			System.out.println("  - Shockwave Durations: " + shockwaveDurations.get().toString());
-			System.out.println("  - Shockwave Size: [" + args[6] + "]");
-			System.out.println("  - Shockwave Impacts: [" + args[7] + "]");
+			System.out.println("  - Shockwave Size: [" + args[7] + "]");
+			System.out.println("  - Shockwave Impacts: [" + args[8] + "]");
 			
-			generateDataset(graphPath, datasetID, numberOfBuckets, bucket);
+			generateDataset(graphPath, datasetID, numberOfBuckets, bucket, cached);
 		} else if(args[0].equalsIgnoreCase("e") || args[0].equalsIgnoreCase("experiment")) {
 			performExperiment(datasetID, numberOfBuckets, bucket);
 		} else {
@@ -290,11 +291,12 @@ public class ExperimentRunner {
 		readGraph(g);
 	}
 	
-	public static void generateDataset(String graphPath, String dataset, int numberOfBuckets, int bucket) {
+	public static void generateDataset(String graphPath, String dataset, int numberOfBuckets, int bucket, boolean cached) {
 		DatasetGenerator.builder()
 			.withGraphSupplier(
 				DotGraphIO.getMultiAttributeDataGraphSupplier(graphPath))
-		    //.setDynamismLevels(Lists.newArrayList(.2, .5, .8))
+			.setCached(cached)
+		    .setDynamismLevels(Lists.newArrayList(.2, .5, .8))
 			.setScenarioLength(SCENARIO_LENGTH_HOURS)
 		    .setUrgencyLevels(Lists.newArrayList(20L))
 		    .setScaleLevels(Lists.newArrayList(5d))
