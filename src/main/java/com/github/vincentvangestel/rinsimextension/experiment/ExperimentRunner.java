@@ -21,15 +21,19 @@ import org.slf4j.LoggerFactory;
 import com.github.rinde.datgen.pdptw.DatasetGenerator;
 import com.github.rinde.logistics.pdptw.mas.TruckFactory.DefaultTruckFactory;
 import com.github.rinde.logistics.pdptw.mas.comm.AuctionCommModel;
+import com.github.rinde.logistics.pdptw.mas.comm.AuctionPanel;
 import com.github.rinde.logistics.pdptw.mas.comm.AuctionStopConditions;
 import com.github.rinde.logistics.pdptw.mas.comm.AuctionTimeStatsLogger;
 import com.github.rinde.logistics.pdptw.mas.comm.DoubleBid;
+import com.github.rinde.logistics.pdptw.mas.comm.RandomBidder;
 import com.github.rinde.logistics.pdptw.mas.comm.RtSolverBidder;
 import com.github.rinde.logistics.pdptw.mas.comm.RtSolverBidder.BidFunction;
 import com.github.rinde.logistics.pdptw.mas.comm.RtSolverBidder.BidFunctions;
+import com.github.rinde.logistics.pdptw.mas.route.RandomRoutePlanner;
 import com.github.rinde.logistics.pdptw.mas.route.RoutePlannerStatsLogger;
 import com.github.rinde.logistics.pdptw.mas.route.RtSolverRoutePlanner;
 import com.github.rinde.logistics.pdptw.solver.optaplanner.OptaplannerSolvers;
+import com.github.rinde.rinsim.central.SolverModel;
 import com.github.rinde.rinsim.central.rt.RtCentral;
 import com.github.rinde.rinsim.central.rt.RtSolverModel;
 import com.github.rinde.rinsim.core.Simulator;
@@ -59,8 +63,12 @@ import com.github.rinde.rinsim.pdptw.common.ChangeConnectionSpeedEvent;
 import com.github.rinde.rinsim.pdptw.common.ObjectiveFunction;
 import com.github.rinde.rinsim.pdptw.common.PDPDynamicGraphRoadModel;
 import com.github.rinde.rinsim.pdptw.common.RouteFollowingVehicle;
+import com.github.rinde.rinsim.pdptw.common.RoutePanel;
+import com.github.rinde.rinsim.pdptw.common.RouteRenderer;
 import com.github.rinde.rinsim.pdptw.common.StatisticsDTO;
+import com.github.rinde.rinsim.pdptw.common.TimeLinePanel;
 import com.github.rinde.rinsim.scenario.Scenario;
+import com.github.rinde.rinsim.scenario.ScenarioConverters;
 import com.github.rinde.rinsim.scenario.ScenarioIO;
 import com.github.rinde.rinsim.scenario.TimeOutEvent;
 import com.github.rinde.rinsim.scenario.TimedEvent;
@@ -68,6 +76,8 @@ import com.github.rinde.rinsim.scenario.TimedEventHandler;
 import com.github.rinde.rinsim.scenario.gendreau06.Gendreau06ObjectiveFunction;
 import com.github.rinde.rinsim.ui.View;
 import com.github.rinde.rinsim.ui.renderers.GraphRoadModelRenderer;
+import com.github.rinde.rinsim.ui.renderers.PDPModelRenderer;
+import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
 import com.github.rinde.rinsim.util.StochasticSupplier;
 import com.github.rinde.rinsim.util.StochasticSuppliers;
 import com.github.vincentvangestel.rinsimextension.vehicle.Taxi;
@@ -111,17 +121,24 @@ public class ExperimentRunner {
 		//args = new String[]{ "e", "easy", "1", "1"};
 		//args = new String[]{"e", "no-shockwaves-multiple", "30", "1"};
 		//args = new String[]{"g", "bucket", "10", "5"};
-		//args = new String[]{"g", "generateTest", "10", "5", "4,1", "3600000,7200000", "0.5,2", "0.5,0.2"};
+		//args = new String[]{"g", "generateTest", "10", "1", "16", "1800000", "3", "0.5"};
+		//args = new String[]{"g", "generateTest", "10", "2", "32", "900000", "3", "0.5"};
+		//args = new String[]{"v", "generateTest", "10", "2"};		
 		
 		if(args.length < 2) {
 			throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID {Generate Options}]");
 		}
 		
-		//String graphPath = new String("/home/vincent/Dropbox/UNI/Thesis/eclipse_workspace/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
-		String graphPath = new String("/home/r0373187/Thesis/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
+		String graphPath = new String("/home/vincent/Dropbox/UNI/Thesis/eclipse_workspace/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
+		//String graphPath = new String("/home/r0373187/Thesis/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
+		String datasetID = args[1].toLowerCase();		
 		
 		int numberOfBuckets = Integer.parseInt(args[2]);
 		int bucket = Integer.parseInt(args[3]);
+		
+		if(args[0].equalsIgnoreCase("v") || args[0].equalsIgnoreCase("visualize")) {
+			showVisualization(datasetID, bucket);
+		} 
 		
 		if(bucket > numberOfBuckets || bucket < 1) {
 			throw new IllegalArgumentException("The bucket identifier should be a valid bucket (i.e. 1 <= bucketID <= #buckets)");
@@ -129,7 +146,7 @@ public class ExperimentRunner {
 		
 		if(args[0].equalsIgnoreCase("g") || args[0].equalsIgnoreCase("generate")) {
 			if(args.length < 8) {
-				throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID {#shockwaves,*} {shockwaveDuration,*} {shockwaveDistance,*} {shockwaveImpact,*}]");
+				throw new IllegalArgumentException("Usage: args = [ g/e/v datasetID #buckets bucketID {#shockwaves,*} {shockwaveDuration,*} {shockwaveDistance,*} {shockwaveImpact,*}]");
 			}
 			numberOfShockwaves = parseNumberOfShockwaves(args[4]);
 			shockwaveDurations = parseShockwaveDuration(args[5]);
@@ -150,11 +167,11 @@ public class ExperimentRunner {
 			System.out.println("  - Shockwave Size: [" + args[6] + "]");
 			System.out.println("  - Shockwave Impacts: [" + args[7] + "]");
 			
-			generateDataset(graphPath, args[1].toLowerCase(), numberOfBuckets, bucket);
+			generateDataset(graphPath, datasetID, numberOfBuckets, bucket);
 		} else if(args[0].equalsIgnoreCase("e") || args[0].equalsIgnoreCase("experiment")) {
-			performExperiment(args[1].toLowerCase(), numberOfBuckets, bucket);
+			performExperiment(datasetID, numberOfBuckets, bucket);
 		} else {
-			throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID {Generate Options}]");
+			throw new IllegalArgumentException("Usage: args = [ g/e/v datasetID #buckets bucketID {Generate Options}]");
 		}
 
 		/**
@@ -277,9 +294,8 @@ public class ExperimentRunner {
 		DatasetGenerator.builder()
 			.withGraphSupplier(
 				DotGraphIO.getMultiAttributeDataGraphSupplier(graphPath))
-		    .setDynamismLevels(Lists.newArrayList(.2, .5, .8))
+		    //.setDynamismLevels(Lists.newArrayList(.2, .5, .8))
 			.setScenarioLength(SCENARIO_LENGTH_HOURS)
-			.setDynamismLevels(Lists.newArrayList(.5))
 		    .setUrgencyLevels(Lists.newArrayList(20L))
 		    .setScaleLevels(Lists.newArrayList(5d))
 		    .setNumInstances((int)(NUM_INSTANCES/numberOfBuckets), (bucket - 1) * (int)(NUM_INSTANCES/numberOfBuckets))
@@ -292,6 +308,73 @@ public class ExperimentRunner {
 			.setShockwaveCreationTimes(shockwaveCreationTimes)
 			.build()
 			.generate();
+	}
+	
+	public static void showVisualization(String dataset, int index) {
+
+		Scenario scenario;
+		
+		File dir = new File("files/datasets/" + dataset + "/");
+		File[] fileList = dir.listFiles(new FilenameFilter()
+		{ 
+        	public boolean accept(File dir, String filename) {
+        		return filename.endsWith(".scen");
+        	}
+		});
+		Arrays.sort(fileList);
+		System.out.println("Showing Run " + fileList[index].getName());
+		
+		scenario = ScenarioIO.reader().apply(fileList[index].toPath());
+		
+		scenario = ScenarioConverters.toSimulatedtime().apply(scenario);
+		
+		final ObjectiveFunction objFunc = Gendreau06ObjectiveFunction.instance(70);
+	    
+		ExperimentResults results = Experiment.builder()
+				  .computeLocal()  
+			      .withRandomSeed(123)
+			      .repeat(1)
+			      .withThreads(1)
+			      .usePostProcessor(new LogProcessor(objFunc))
+			      .addScenario(scenario).addConfiguration(MASConfiguration.pdptwBuilder()
+							.addEventHandler(AddDepotEvent.class, AddDepotEvent.defaultHandler())
+							.addEventHandler(AddParcelEvent.class, AddParcelEvent.defaultHandler())
+							.addEventHandler(ChangeConnectionSpeedEvent.class, ChangeConnectionSpeedEvent.defaultHandler())
+					.addEventHandler(AddVehicleEvent.class,
+							DefaultTruckFactory.builder()
+							.setCommunicator(RandomBidder.supplier())
+							.setRouteAdjuster(RouteFollowingVehicle.delayAdjuster())
+							.setRoutePlanner(RandomRoutePlanner.supplier())
+							 .build())
+					.addModel(AuctionCommModel.builder(DoubleBid.class)
+							.withStopCondition(AuctionStopConditions.and(AuctionStopConditions.<DoubleBid>atLeastNumBids(2),
+									AuctionStopConditions.<DoubleBid>or(AuctionStopConditions.<DoubleBid>allBidders(),
+											AuctionStopConditions.<DoubleBid>maxAuctionDuration(5000))))
+							.withMaxAuctionDuration(30 * 60 * 1000L))
+							//.withMaxAuctionDuration(5000L))
+					.addModel(SolverModel.builder())
+					.addEventHandler(TimeOutEvent.class, TimeOutEvent.ignoreHandler())
+					.build())
+				.showGui(View.builder()
+						//.with(RoadUserRenderer.builder().withToStringLabel())
+						//.with(RouteRenderer.builder())
+						//.with(PDPModelRenderer.builder())
+						.with(GraphRoadModelRenderer.builder()
+								//.withStaticRelativeSpeedVisualization()
+								.withDynamicRelativeSpeedVisualization()
+								)
+						.with(AuctionPanel.builder())
+							.with(RoutePanel.builder())
+							.with(TimeLinePanel.builder())
+							.withResolution(1280, 1024)
+							.withAutoPlay()
+							.withAutoClose())
+		
+				.perform();
+		
+		System.out.println(results.toString());
+		System.exit(0);
+
 	}
 
 	public static void performExperiment(String dataset, int numberOfBuckets, int bucket) {
