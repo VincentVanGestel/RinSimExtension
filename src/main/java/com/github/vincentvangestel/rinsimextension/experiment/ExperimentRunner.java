@@ -119,7 +119,7 @@ public class ExperimentRunner {
 		//args = new String[]{"e", "no-shockwaves-multiple", "30", "1"};
 		//args = new String[]{"g", "generateTest", "10", "1", "false", "16", "1800000", "3", "0.5"};
 		//args = new String[]{"g", "generateTest", "10", "3", "true", "32", "900000", "3", "0.5"};
-		args = new String[]{"g", "h1cllsml", "1", "1", "false", "32", "7200000", "4", "0.5"};
+		//args = new String[]{"g", "h1cllsml", "1", "1", "false", "32", "7200000", "4", "0.5", "low"};
 		//args = new String[]{"v", "generateTest", "10", "0"};		
 		
 		
