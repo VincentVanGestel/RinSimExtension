@@ -64,7 +64,6 @@ import com.github.rinde.rinsim.pdptw.common.ObjectiveFunction;
 import com.github.rinde.rinsim.pdptw.common.PDPDynamicGraphRoadModel;
 import com.github.rinde.rinsim.pdptw.common.RouteFollowingVehicle;
 import com.github.rinde.rinsim.pdptw.common.RoutePanel;
-import com.github.rinde.rinsim.pdptw.common.RouteRenderer;
 import com.github.rinde.rinsim.pdptw.common.StatisticsDTO;
 import com.github.rinde.rinsim.pdptw.common.TimeLinePanel;
 import com.github.rinde.rinsim.scenario.Scenario;
@@ -76,8 +75,6 @@ import com.github.rinde.rinsim.scenario.TimedEventHandler;
 import com.github.rinde.rinsim.scenario.gendreau06.Gendreau06ObjectiveFunction;
 import com.github.rinde.rinsim.ui.View;
 import com.github.rinde.rinsim.ui.renderers.GraphRoadModelRenderer;
-import com.github.rinde.rinsim.ui.renderers.PDPModelRenderer;
-import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
 import com.github.rinde.rinsim.util.StochasticSupplier;
 import com.github.rinde.rinsim.util.StochasticSuppliers;
 import com.github.vincentvangestel.rinsimextension.vehicle.Taxi;
@@ -122,14 +119,16 @@ public class ExperimentRunner {
 		//args = new String[]{"e", "no-shockwaves-multiple", "30", "1"};
 		//args = new String[]{"g", "generateTest", "10", "1", "false", "16", "1800000", "3", "0.5"};
 		//args = new String[]{"g", "generateTest", "10", "3", "true", "32", "900000", "3", "0.5"};
+		args = new String[]{"g", "h1cllsml", "1", "1", "false", "32", "7200000", "4", "0.5"};
 		//args = new String[]{"v", "generateTest", "10", "0"};		
+		
 		
 		if(args.length < 2) {
 			throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID {Generate Options}]");
 		}
 		
-		String graphPath = new String("/home/vincent/Dropbox/UNI/Thesis/eclipse_workspace/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
-		//String graphPath = new String("/home/r0373187/Thesis/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
+		//String graphPath = new String("/home/vincent/Dropbox/UNI/Thesis/eclipse_workspace/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
+		String graphPath = new String("/home/r0373187/Thesis/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
 		String datasetID = args[1].toLowerCase();		
 		
 		int numberOfBuckets = Integer.parseInt(args[2]);
@@ -144,14 +143,15 @@ public class ExperimentRunner {
 		}
 		
 		if(args[0].equalsIgnoreCase("g") || args[0].equalsIgnoreCase("generate")) {
-			if(args.length < 9) {
-				throw new IllegalArgumentException("Usage: args = [ g/e/v datasetID #buckets bucketID {cached} {#shockwaves,*} {shockwaveDuration,*} {shockwaveDistance,*} {shockwaveImpact,*}]");
+			if(args.length < 10) {
+				throw new IllegalArgumentException("Usage: args = [ g/e/v datasetID #buckets bucketID {cached} {#shockwaves,*} {shockwaveDuration,*} {shockwaveDistance,*} {shockwaveImpact,*} {frequency modifier (l,h)}]");
 			}
 			boolean cached = Boolean.parseBoolean(args[4]);
-			numberOfShockwaves = parseNumberOfShockwaves(args[5]);
-			shockwaveDurations = parseShockwaveDuration(args[6]);
+			ShockwaveFrequencyModifier mod = new ShockwaveFrequencyModifier(args[9]);
+			numberOfShockwaves = parseNumberOfShockwaves(args[5], mod.getAmountModifier());
+			shockwaveDurations = parseShockwaveDuration(args[6], mod.getDurationModifier());
 			
-			shockwaveBehaviors = parseShockwaveBehavior(args[7], args[8]);
+			shockwaveBehaviors = parseShockwaveBehavior(args[7], args[8], mod.getSizeModifier());
 			
 			shockwaveCreationTimes = Optional.of(
 					Collections.nCopies(
@@ -167,6 +167,7 @@ public class ExperimentRunner {
 			System.out.println("  - Shockwave Durations: " + shockwaveDurations.get().toString());
 			System.out.println("  - Shockwave Size: [" + args[7] + "]");
 			System.out.println("  - Shockwave Impacts: [" + args[8] + "]");
+			System.out.println("  - Shockwave Frequency: " + mod.toString());
 			
 			generateDataset(graphPath, datasetID, numberOfBuckets, bucket, cached);
 		} else if(args[0].equalsIgnoreCase("e") || args[0].equalsIgnoreCase("experiment")) {
@@ -217,7 +218,7 @@ public class ExperimentRunner {
 	}
 
 	private static Optional<List<StochasticSupplier<Function<Double, Double>>>> parseShockwaveBehavior(String distanceListString,
-			String impactListString) {
+			String impactListString, double modifier) {
 		String[] distances = distanceListString.split(",");
 		String[] impacts = impactListString.split(",");
 		
@@ -228,7 +229,7 @@ public class ExperimentRunner {
 		List<StochasticSupplier<Function<Double,Double>>> behaviors = new ArrayList<>();
 		
 		for(int i = 0; i < distances.length; i++) {
-			final double distance = Double.parseDouble(distances[i]);
+			final double distance = Double.parseDouble(distances[i]) * modifier;
 			final double impact = Double.parseDouble(impacts[i]);
 			
 			behaviors.add(StochasticSuppliers.constant(new Function<Double,Double>() {
@@ -250,20 +251,20 @@ public class ExperimentRunner {
 		return Optional.of(Collections.nCopies(size, StochasticSuppliers.constant(DEFAULT_SPEED_FUNCTION)));
 	}
 
-	private static List<Integer> parseNumberOfShockwaves(String numberOfShockwavesListString) {
+	private static List<Integer> parseNumberOfShockwaves(String numberOfShockwavesListString, int modifier) {
 		String[] numberOfShockwavesStrings = numberOfShockwavesListString.split(",");
 		List<Integer> numberOfShockwaves = new ArrayList<>();
 		for(String numberOfShockwavesString : numberOfShockwavesStrings) {
-			numberOfShockwaves.add(Integer.parseInt(numberOfShockwavesString));
+			numberOfShockwaves.add(Integer.parseInt(numberOfShockwavesString) * modifier);
 		}
 		return numberOfShockwaves;
 	}
 
-	private static Optional<List<StochasticSupplier<Long>>> parseShockwaveDuration(String shockwaveDurationsListString) {
+	private static Optional<List<StochasticSupplier<Long>>> parseShockwaveDuration(String shockwaveDurationsListString, long modifier) {
 		String[] shockwaveDurationStrings = shockwaveDurationsListString.split(",");
 		List<StochasticSupplier<Long>> shockwaveDurations = new ArrayList<>();
 		for(String shockwaveDuration : shockwaveDurationStrings) {
-			shockwaveDurations.add(StochasticSuppliers.constant(Long.parseLong(shockwaveDuration)));
+			shockwaveDurations.add(StochasticSuppliers.constant(Long.parseLong(shockwaveDuration) * modifier));
 		}
 		return Optional.of(shockwaveDurations);
 	}	
@@ -769,5 +770,30 @@ public class ExperimentRunner {
 
     }
   }
+	 
+	 static class ShockwaveFrequencyModifier {
+		 
+		 final boolean modified;
+		 
+		 ShockwaveFrequencyModifier(String m) {
+			 modified = m.equalsIgnoreCase("h") || m.equalsIgnoreCase("high"); 
+		 }
+		 
+		 int getAmountModifier() {
+			 return modified ? 2 : 1;
+		 }
+		 
+		 double getSizeModifier() {
+			 return modified ? Math.sqrt(2) : 1;
+		 }
+		 
+		 long getDurationModifier() {
+			 return modified ? 2L : 1L;
+		 }
+		 
+		 public String toString() {
+			 return modified ? "High" : "Low";
+		 }
+	 }
 
 }
