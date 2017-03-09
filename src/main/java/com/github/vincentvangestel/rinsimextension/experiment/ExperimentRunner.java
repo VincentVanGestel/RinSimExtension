@@ -149,7 +149,7 @@ public class ExperimentRunner {
 			boolean cached = Boolean.parseBoolean(args[4]);
 			ShockwaveFrequencyModifier mod = new ShockwaveFrequencyModifier(args[9]);
 			numberOfShockwaves = parseNumberOfShockwaves(args[5], mod.getAmountModifier());
-			shockwaveDurations = parseShockwaveDuration(args[6], mod.getDurationModifier());
+			shockwaveDurations = parseShockwaveDuration(args[6]);
 			
 			shockwaveBehaviors = parseShockwaveBehavior(args[7], args[8], mod.getSizeModifier());
 			
@@ -260,11 +260,11 @@ public class ExperimentRunner {
 		return numberOfShockwaves;
 	}
 
-	private static Optional<List<StochasticSupplier<Long>>> parseShockwaveDuration(String shockwaveDurationsListString, long modifier) {
+	private static Optional<List<StochasticSupplier<Long>>> parseShockwaveDuration(String shockwaveDurationsListString) {
 		String[] shockwaveDurationStrings = shockwaveDurationsListString.split(",");
 		List<StochasticSupplier<Long>> shockwaveDurations = new ArrayList<>();
 		for(String shockwaveDuration : shockwaveDurationStrings) {
-			shockwaveDurations.add(StochasticSuppliers.constant(Long.parseLong(shockwaveDuration) * modifier));
+			shockwaveDurations.add(StochasticSuppliers.constant(Long.parseLong(shockwaveDuration)));
 		}
 		return Optional.of(shockwaveDurations);
 	}	
@@ -785,10 +785,6 @@ public class ExperimentRunner {
 		 
 		 double getSizeModifier() {
 			 return modified ? Math.sqrt(2) : 1;
-		 }
-		 
-		 long getDurationModifier() {
-			 return modified ? 2L : 1L;
 		 }
 		 
 		 public String toString() {
