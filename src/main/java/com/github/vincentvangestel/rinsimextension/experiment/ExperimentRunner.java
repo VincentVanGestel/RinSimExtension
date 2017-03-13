@@ -171,7 +171,11 @@ public class ExperimentRunner {
 			
 			generateDataset(graphPath, datasetID, numberOfBuckets, bucket, cached);
 		} else if(args[0].equalsIgnoreCase("e") || args[0].equalsIgnoreCase("experiment")) {
-			performExperiment(datasetID, numberOfBuckets, bucket);
+			if(args.length < 5) {
+				throw new IllegalArgumentException("Usage: experiment DatasetID #Buckets BucketID Local/Distributed");
+			}
+			boolean local = parseLocal(args[4]);
+			performExperiment(datasetID, numberOfBuckets, bucket, local);
 		} else {
 			throw new IllegalArgumentException("Usage: args = [ g/e/v datasetID #buckets bucketID {Generate Options}]");
 		}
@@ -268,6 +272,14 @@ public class ExperimentRunner {
 		}
 		return Optional.of(shockwaveDurations);
 	}	
+	
+	private static boolean parseLocal(String local) {
+		if(local.equalsIgnoreCase("local") || local.equalsIgnoreCase("l")) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 
 	public static Graph<MultiAttributeData> returnGraph(String file) throws IOException {
 		DotGraphIO<MultiAttributeData> dotGraphIO = DotGraphIO.getMultiAttributeGraphIO(Filters.selfCycleFilter());
@@ -380,7 +392,7 @@ public class ExperimentRunner {
 
 	}
 
-	public static void performExperiment(String dataset, int numberOfBuckets, int bucket) {
+	public static void performExperiment(String dataset, int numberOfBuckets, int bucket, boolean local) {
 		System.out.println(System.getProperty("java.vm.name") + ", "
 			      + System.getProperty("java.vm.vendor") + ", "
 			      + System.getProperty("java.vm.version") + " (runtime version: "
@@ -425,15 +437,21 @@ public class ExperimentRunner {
 	    	      //.withUnimprovedMsLimit(rpMs)
 	    	      //.withName(masSolverName)
 	    	      //.withObjectiveFunction(objFunc);
-
-		ExperimentResults results = Experiment.builder()
-				//.computeLocal()  
-				.computeDistributed()
-				  .numBatches(1)
+	    
+	    Experiment.Builder exBuilder = Experiment.builder();
+	    
+	    if(local) {
+	    	exBuilder = exBuilder.computeLocal();
+	    } else {
+	    	exBuilder = exBuilder
+	    			.computeDistributed()
+	    			.numBatches(1);
+	    }
+	    
+		ExperimentResults results = exBuilder
 			      .withRandomSeed(123)
-			      //.withThreads(1)
 			      .repeat(1)
-			      //.withWarmup(30000)
+			      .withWarmup(30000)
 			      .addResultListener(new CommandLineProgress(System.out))
 			      .addResultListener(new VanLonHolvoetResultWriter(
 			    		  new File("files/results/" + dataset),
@@ -442,60 +460,6 @@ public class ExperimentRunner {
 			      .usePostProcessor(new LogProcessor(objFunc))
 			      .addConfigurations(mainConfigs(opFfdFactory, objFunc))
 				.addScenarios(scenarios)
-//				.addConfiguration(MASConfiguration.pdptwBuilder()
-//						.addEventHandler(AddDepotEvent.class, AddDepotEvent.defaultHandler())
-//				.addEventHandler(AddParcelEvent.class, AddParcelEvent.defaultHandler())
-//				.addEventHandler(ChangeConnectionSpeedEvent.class, ChangeConnectionSpeedEvent.defaultHandler())
-//				// .addEventHandler(AddVehicleEvent.class,
-//				// CustomVehicleHandler.INSTANCE)
-//				.addEventHandler(AddVehicleEvent.class,
-//						DefaultTruckFactory.builder()
-//						//.setRoutePlanner(SolverRoutePlanner.supplier(OptaplannerSolvers.builder()
-//						.setRoutePlanner(RtSolverRoutePlanner.supplier(OptaplannerSolvers.builder()
-//								//.withCheapestInsertionSolver()
-//								.withSolverXmlResource("com/github/rinde/jaamas16/jaamas-solver.xml")
-//								.withName(masSolverName)
-//								//.withFirstFitDecreasingWithTabuSolver()
-//								.withUnimprovedMsLimit(rpMs)
-//								//.buildSolverSupplier()))
-//								.buildRealtimeSolverSupplier()))
-//						//.setRoutePlanner(GotoClosestRoutePlanner.supplier())
-//		                  .setCommunicator(RtSolverBidder.realtimeBuilder(objFunc,
-//	                    opFfdFactory
-//	                    //.withSolverKey(masSolverName)
-//	                      .withUnimprovedMsLimit(bMs)
-//	                      .buildRealtimeSolverSupplier())
-//	                		  .withBidFunction(bf))
-//						//.setCommunicator(RandomBidder.supplier())
-//						.setLazyComputation(false)
-//						.setRouteAdjuster(RouteFollowingVehicle.delayAdjuster())
-//						 .build())
-//				.addModel(AuctionCommModel.builder(DoubleBid.class)
-//						.withStopCondition(AuctionStopConditions.and(AuctionStopConditions.<DoubleBid>atLeastNumBids(2),
-//								AuctionStopConditions.<DoubleBid>or(AuctionStopConditions.<DoubleBid>allBidders(),
-//										AuctionStopConditions.<DoubleBid>maxAuctionDuration(10000))))
-//						.withMaxAuctionDuration(30 * 60 * 1000L))
-//						//.withMaxAuctionDuration(5000L))
-//				//.addModel(SolverModel.builder())
-//				.addModel(RtSolverModel.builder())
-//				.addEventHandler(TimeOutEvent.class, TimeOutEvent.ignoreHandler())
-//				.build())
-				
-//				.showGui(View.builder()
-//						.with(RoadUserRenderer.builder().withToStringLabel())
-//						.with(RouteRenderer.builder())
-//						.with(PDPModelRenderer.builder())
-//						.with(GraphRoadModelRenderer.builder()
-//								//.withStaticRelativeSpeedVisualization()
-//								.withDynamicRelativeSpeedVisualization()
-//								)
-//						.with(AuctionPanel.builder())
-//							.with(RoutePanel.builder())
-//							.with(TimeLinePanel.builder())
-//							.withResolution(1280, 1024)
-//							.withAutoPlay()
-//							.withAutoClose())
-		
 				.perform();
 		
 		System.out.println(results.toString());
