@@ -753,11 +753,11 @@ public class ExperimentRunner {
 		 }
 
 		 public double[] getSizes() {
-			 return sizes;
+			 return sizes.clone();
 		 }
 
 		 public double[] getImpacts() {
-			 return impacts;
+			 return impacts.clone();
 		 }
 
 	 }
