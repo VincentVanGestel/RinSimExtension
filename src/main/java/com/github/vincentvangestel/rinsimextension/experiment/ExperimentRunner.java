@@ -166,8 +166,8 @@ public class ExperimentRunner {
 			System.out.println("  - With a cached road model: " + cached);
 			System.out.println("  - Number of shockwaves: " + numberOfShockwaves.toString());
 			System.out.println("  - Shockwave Durations: " + shockwaveDurations.get().toString());
-			System.out.println("  - Shockwave Size: " + sbm.getSizes().toString());
-			System.out.println("  - Shockwave Impacts: " + sbm.getImpacts().toString());
+			System.out.println("  - Shockwave Size: " + Arrays.toString(sbm.getSizes()));
+			System.out.println("  - Shockwave Impacts: " + Arrays.toString(sbm.getImpacts()));
 			System.out.println("  - Shockwave Frequency: " + mod.toString());
 			
 			generateDataset(graphPath, datasetID, numberOfBuckets, bucket, cached);
