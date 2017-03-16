@@ -116,7 +116,7 @@ public class ExperimentRunner {
 	public static void main(String[] args) throws IOException {
 		
 		//args = new String[]{ "e", "easy", "1", "1"};
-		//args = new String[]{"e", "no-shockwaves-multiple", "30", "1"};
+		//args = new String[]{"e", "h1cllsml", "30", "1", "local"};
 		//args = new String[]{"g", "generateTest", "10", "1", "false", "16", "1800000", "3", "0.5"};
 		//args = new String[]{"g", "generateTest", "10", "3", "true", "32", "900000", "3", "0.5"};
 		//args = new String[]{"g", "h1cllsml", "1", "1", "false", "32", "7200000", "4", "0.5", "low"};
@@ -151,7 +151,8 @@ public class ExperimentRunner {
 			numberOfShockwaves = parseNumberOfShockwaves(args[5], mod.getAmountModifier());
 			shockwaveDurations = parseShockwaveDuration(args[6]);
 			
-			shockwaveBehaviors = parseShockwaveBehavior(args[7], args[8], mod.getSizeModifier());
+			ShockwaveBehaviorMetadata sbm = new ShockwaveBehaviorMetadata(args[7], args[8], mod.getSizeModifier());
+			shockwaveBehaviors = sbm.getBehaviorList();
 			
 			shockwaveCreationTimes = Optional.of(
 					Collections.nCopies(
@@ -165,8 +166,8 @@ public class ExperimentRunner {
 			System.out.println("  - With a cached road model: " + cached);
 			System.out.println("  - Number of shockwaves: " + numberOfShockwaves.toString());
 			System.out.println("  - Shockwave Durations: " + shockwaveDurations.get().toString());
-			System.out.println("  - Shockwave Size: [" + args[7] + "]");
-			System.out.println("  - Shockwave Impacts: [" + args[8] + "]");
+			System.out.println("  - Shockwave Size: " + sbm.getSizes().toString());
+			System.out.println("  - Shockwave Impacts: " + sbm.getImpacts().toString());
 			System.out.println("  - Shockwave Frequency: " + mod.toString());
 			
 			generateDataset(graphPath, datasetID, numberOfBuckets, bucket, cached);
@@ -219,36 +220,6 @@ public class ExperimentRunner {
 		// "files/maps/dot/leuven-large-double-pruned-second-center-WRONG.dot");
 
 		//Optional<String> dataset = Optional.of("files/datasets/0.50-20-1.00-0.scen");
-	}
-
-	private static Optional<List<StochasticSupplier<Function<Double, Double>>>> parseShockwaveBehavior(String distanceListString,
-			String impactListString, double modifier) {
-		String[] distances = distanceListString.split(",");
-		String[] impacts = impactListString.split(",");
-		
-		if(distances.length != impacts.length) {
-			throw new IllegalArgumentException("The Generate Options should all have the same size!");
-		}
-		
-		List<StochasticSupplier<Function<Double,Double>>> behaviors = new ArrayList<>();
-		
-		for(int i = 0; i < distances.length; i++) {
-			final double distance = Double.parseDouble(distances[i]) * modifier;
-			final double impact = Double.parseDouble(impacts[i]);
-			
-			behaviors.add(StochasticSuppliers.constant(new Function<Double,Double>() {
-				@Override
-				public Double apply(Double input) {
-					if(input >= distance) {
-						return 1d;
-					} else {
-						return impact;
-					}
-				}
-			}));
-		}
-
-		return Optional.of(behaviors);
 	}
 
 	private static Optional<List<StochasticSupplier<Function<Long, Double>>>> defaultShockwaveSpeed(int size) {
@@ -734,6 +705,62 @@ public class ExperimentRunner {
 
     }
   }
+	 
+	 static class ShockwaveBehaviorMetadata {
+
+		 private final Optional<List<StochasticSupplier<Function<Double, Double>>>> behaviorList;
+		 private double[] sizes;
+		 private double[] impacts;
+
+		 ShockwaveBehaviorMetadata(String distanceListString,
+				 String impactListString, double modifier) {
+			 String[] distanceStrings = distanceListString.split(",");
+			 String[] impactStrings = impactListString.split(",");
+
+			 sizes = new double[distanceStrings.length];
+			 impacts = new double[impactStrings.length];
+
+			 if(distanceStrings.length != impacts.length) {
+				 throw new IllegalArgumentException("The Generate Options should all have the same size!");
+			 }
+
+			 List<StochasticSupplier<Function<Double,Double>>> behaviors = new ArrayList<>();
+
+			 for(int i = 0; i < distanceStrings.length; i++) {
+				 final double distance = Double.parseDouble(distanceStrings[i]) * modifier;
+				 final double impact = Double.parseDouble(impactStrings[i]);
+
+				 sizes[i] = distance;
+				 impacts[i] = impact;
+
+				 behaviors.add(StochasticSuppliers.constant(new Function<Double,Double>() {
+					 @Override
+					 public Double apply(Double input) {
+						 if(input >= distance) {
+							 return 1d;
+						 } else {
+							 return impact;
+						 }
+					 }
+				 }));
+			 }
+
+			 behaviorList = Optional.of(behaviors);
+		 }
+
+		 public Optional<List<StochasticSupplier<Function<Double, Double>>>> getBehaviorList() {
+			 return behaviorList;
+		 }
+
+		 public double[] getSizes() {
+			 return sizes;
+		 }
+
+		 public double[] getImpacts() {
+			 return impacts;
+		 }
+
+	 }
 	 
 	 static class ShockwaveFrequencyModifier {
 		 
