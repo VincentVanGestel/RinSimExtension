@@ -727,7 +727,7 @@ public class ExperimentRunner {
 			 List<StochasticSupplier<Function<Double,Double>>> behaviors = new ArrayList<>();
 
 			 for(int i = 0; i < distanceStrings.length; i++) {
-				 final double distance = Double.parseDouble(distanceStrings[i]) * modifier;
+				 final double distance = Double.parseDouble(distanceStrings[i]) / modifier;
 				 final double impact = Double.parseDouble(impactStrings[i]);
 
 				 sizes[i] = distance;
