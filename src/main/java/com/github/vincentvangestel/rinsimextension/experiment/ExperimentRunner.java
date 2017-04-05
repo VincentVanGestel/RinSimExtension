@@ -25,15 +25,12 @@ import com.github.rinde.logistics.pdptw.mas.comm.AuctionPanel;
 import com.github.rinde.logistics.pdptw.mas.comm.AuctionStopConditions;
 import com.github.rinde.logistics.pdptw.mas.comm.AuctionTimeStatsLogger;
 import com.github.rinde.logistics.pdptw.mas.comm.DoubleBid;
-import com.github.rinde.logistics.pdptw.mas.comm.RandomBidder;
 import com.github.rinde.logistics.pdptw.mas.comm.RtSolverBidder;
 import com.github.rinde.logistics.pdptw.mas.comm.RtSolverBidder.BidFunction;
 import com.github.rinde.logistics.pdptw.mas.comm.RtSolverBidder.BidFunctions;
-import com.github.rinde.logistics.pdptw.mas.route.RandomRoutePlanner;
 import com.github.rinde.logistics.pdptw.mas.route.RoutePlannerStatsLogger;
 import com.github.rinde.logistics.pdptw.mas.route.RtSolverRoutePlanner;
 import com.github.rinde.logistics.pdptw.solver.optaplanner.OptaplannerSolvers;
-import com.github.rinde.rinsim.central.SolverModel;
 import com.github.rinde.rinsim.central.rt.RtCentral;
 import com.github.rinde.rinsim.central.rt.RtSolverModel;
 import com.github.rinde.rinsim.core.Simulator;
@@ -64,10 +61,10 @@ import com.github.rinde.rinsim.pdptw.common.ObjectiveFunction;
 import com.github.rinde.rinsim.pdptw.common.PDPDynamicGraphRoadModel;
 import com.github.rinde.rinsim.pdptw.common.RouteFollowingVehicle;
 import com.github.rinde.rinsim.pdptw.common.RoutePanel;
+import com.github.rinde.rinsim.pdptw.common.RouteRenderer;
 import com.github.rinde.rinsim.pdptw.common.StatisticsDTO;
 import com.github.rinde.rinsim.pdptw.common.TimeLinePanel;
 import com.github.rinde.rinsim.scenario.Scenario;
-import com.github.rinde.rinsim.scenario.ScenarioConverters;
 import com.github.rinde.rinsim.scenario.ScenarioIO;
 import com.github.rinde.rinsim.scenario.TimeOutEvent;
 import com.github.rinde.rinsim.scenario.TimedEvent;
@@ -75,9 +72,12 @@ import com.github.rinde.rinsim.scenario.TimedEventHandler;
 import com.github.rinde.rinsim.scenario.gendreau06.Gendreau06ObjectiveFunction;
 import com.github.rinde.rinsim.ui.View;
 import com.github.rinde.rinsim.ui.renderers.GraphRoadModelRenderer;
+import com.github.rinde.rinsim.ui.renderers.PDPModelRenderer;
+import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
 import com.github.rinde.rinsim.util.StochasticSupplier;
 import com.github.rinde.rinsim.util.StochasticSuppliers;
 import com.github.vincentvangestel.rinsimextension.vehicle.Taxi;
+import com.github.vincentvangestel.roadmodelext.ShortestPathCache;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -116,10 +116,10 @@ public class ExperimentRunner {
 	public static void main(String[] args) throws IOException {
 		
 		//args = new String[]{ "e", "easy", "1", "1"};
-		//args = new String[]{"e", "h1cllsml", "30", "1", "local"};
+		//args = new String[]{"e", "ssh1cllsml", "1", "1", "local"};
 		//args = new String[]{"g", "generateTest", "10", "1", "false", "16", "1800000", "3", "0.5"};
-		//args = new String[]{"g", "generateTest", "10", "3", "true", "32", "900000", "3", "0.5"};
-		//args = new String[]{"g", "h1cllsml", "1", "1", "false", "32", "7200000", "4", "0.5", "low"};
+		//args = new String[]{"g", "generateTest", "10", "1", "true", "32", "900000", "3", "0.5", "low"};
+		//args = new String[]{"g", "ssh1cllsml", "2", "1", "false", "32", "7200000", "4", "0.5", "low"};
 		//args = new String[]{"v", "generateTest", "10", "0"};		
 		
 		
@@ -128,7 +128,9 @@ public class ExperimentRunner {
 		}
 		
 		//String graphPath = new String("/home/vincent/Dropbox/UNI/Thesis/eclipse_workspace/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
-		String graphPath = new String("/home/r0373187/Thesis/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
+		//String graphPath = new String("/home/r0373187/Thesis/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
+		String graphPath = new String("files/maps/dot/leuven-large-pruned.dot");
+		String cachePath = new String("files/maps/dot/leuven-large-pruned.cache");
 		String datasetID = args[1].toLowerCase();		
 		
 		int numberOfBuckets = Integer.parseInt(args[2]);
@@ -146,7 +148,11 @@ public class ExperimentRunner {
 			if(args.length < 10) {
 				throw new IllegalArgumentException("Usage: args = [ g/e/v datasetID #buckets bucketID {cached} {#shockwaves,*} {shockwaveDuration,*} {shockwaveDistance,*} {shockwaveImpact,*} {frequency modifier (l,h)}]");
 			}
-			boolean cached = Boolean.parseBoolean(args[4]);
+			Optional<String> cache = Optional.absent();
+			if(Boolean.parseBoolean(args[4])) {
+				cache = Optional.of(cachePath);
+			}
+			
 			ShockwaveFrequencyModifier mod = new ShockwaveFrequencyModifier(args[9]);
 			numberOfShockwaves = parseNumberOfShockwaves(args[5], mod.getAmountModifier());
 			shockwaveDurations = parseShockwaveDuration(args[6]);
@@ -163,14 +169,14 @@ public class ExperimentRunner {
 			shockwaveRecedingSpeeds = shockwaveExpandingSpeeds;
 			
 			System.out.println("> Generating " + (int)(NUM_INSTANCES/numberOfBuckets) * 3 + " instances of Datasets with shockwave parameters:");
-			System.out.println("  - With a cached road model: " + cached);
+			System.out.println("  - With a cached road model: " + cache.isPresent());
 			System.out.println("  - Number of shockwaves: " + numberOfShockwaves.toString());
 			System.out.println("  - Shockwave Durations: " + shockwaveDurations.get().toString());
 			System.out.println("  - Shockwave Size: " + Arrays.toString(sbm.getSizes()));
 			System.out.println("  - Shockwave Impacts: " + Arrays.toString(sbm.getImpacts()));
 			System.out.println("  - Shockwave Frequency: " + mod.toString());
 			
-			generateDataset(graphPath, datasetID, numberOfBuckets, bucket, cached);
+			generateDataset(graphPath, datasetID, numberOfBuckets, bucket, cache);
 		} else if(args[0].equalsIgnoreCase("e") || args[0].equalsIgnoreCase("experiment")) {
 			if(args.length < 5) {
 				throw new IllegalArgumentException("Usage: experiment DatasetID #Buckets BucketID Local/Distributed");
@@ -275,15 +281,16 @@ public class ExperimentRunner {
 		readGraph(g);
 	}
 	
-	public static void generateDataset(String graphPath, String dataset, int numberOfBuckets, int bucket, boolean cached) {
-		DatasetGenerator.builder()
+	public static void generateDataset(String graphPath, String dataset, int numberOfBuckets, int bucket, Optional<String> cachePath) {
+		DatasetGenerator.Builder b = DatasetGenerator.builder()
 			.withGraphSupplier(
 				DotGraphIO.getMultiAttributeDataGraphSupplier(graphPath))
-			.setCached(cached)
 		    .setDynamismLevels(Lists.newArrayList(.2, .5, .8))
+			//.setDynamismLevels(Lists.newArrayList(.2))
 			.setScenarioLength(SCENARIO_LENGTH_HOURS)
 		    .setUrgencyLevels(Lists.newArrayList(20L))
 		    .setScaleLevels(Lists.newArrayList(5d))
+		    //.setScaleLevels(Lists.newArrayList(0.5d))
 		    .setNumInstances((int)(NUM_INSTANCES/numberOfBuckets), (bucket - 1) * (int)(NUM_INSTANCES/numberOfBuckets))
 			.setDatasetDir("files/datasets/" + dataset + "/")
 			.setNumberOfShockwaves(numberOfShockwaves)
@@ -291,8 +298,11 @@ public class ExperimentRunner {
 			.setShockwaveRecedingSpeed(shockwaveRecedingSpeeds)
 			.setShockwaveBehaviour(shockwaveBehaviors)
 			.setShockwaveDuration(shockwaveDurations)
-			.setShockwaveCreationTimes(shockwaveCreationTimes)
-			.build()
+			.setShockwaveCreationTimes(shockwaveCreationTimes);
+		if(cachePath.isPresent()) {
+			b.withCacheSupplier(ShortestPathCache.getShortestPathCacheSupplier(cachePath.get()));
+		}
+			b.build()
 			.generate();
 	}
 	
@@ -312,9 +322,25 @@ public class ExperimentRunner {
 		
 		scenario = ScenarioIO.reader().apply(fileList[index].toPath());
 		
-		scenario = ScenarioConverters.toSimulatedtime().apply(scenario);
+		//scenario = ScenarioConverters.toSimulatedtime().apply(scenario);
 		
 		final ObjectiveFunction objFunc = Gendreau06ObjectiveFunction.instance(70);
+	    final long rpMs = 100L;
+	    final long bMs = 20L;
+	    final BidFunction bf = BidFunctions.BALANCED_HIGH;
+	    final String masSolverName =
+	    	      "Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation";
+	    
+	    final OptaplannerSolvers.Builder opFfdFactory =
+	    	      OptaplannerSolvers.builder()
+	    	      	.withSolverHeuristic(GeomHeuristics.time(70d));
+	    	      //.withSolverXmlResource(
+	    	      //  "com/github/rinde/jaamas16/jaamas-solver.xml")
+	    	      //.withUnimprovedMsLimit(rpMs)
+	    	      //.withName(masSolverName)
+	    	      //.withObjectiveFunction(objFunc);
+		
+		//final ObjectiveFunction objFunc = Gendreau06ObjectiveFunction.instance(70);
 	    
 		ExperimentResults results = Experiment.builder()
 				  .computeLocal()  
@@ -322,32 +348,34 @@ public class ExperimentRunner {
 			      .repeat(1)
 			      .withThreads(1)
 			      .usePostProcessor(new LogProcessor(objFunc))
-			      .addScenario(scenario).addConfiguration(MASConfiguration.pdptwBuilder()
-							.addEventHandler(AddDepotEvent.class, AddDepotEvent.defaultHandler())
-							.addEventHandler(AddParcelEvent.class, AddParcelEvent.defaultHandler())
-							.addEventHandler(ChangeConnectionSpeedEvent.class, ChangeConnectionSpeedEvent.defaultHandler())
-					.addEventHandler(AddVehicleEvent.class,
-							DefaultTruckFactory.builder()
-							.setCommunicator(RandomBidder.supplier())
-							.setRouteAdjuster(RouteFollowingVehicle.delayAdjuster())
-							.setRoutePlanner(RandomRoutePlanner.supplier())
-							 .build())
-					.addModel(AuctionCommModel.builder(DoubleBid.class)
-							.withStopCondition(AuctionStopConditions.and(AuctionStopConditions.<DoubleBid>atLeastNumBids(2),
-									AuctionStopConditions.<DoubleBid>or(AuctionStopConditions.<DoubleBid>allBidders(),
-											AuctionStopConditions.<DoubleBid>maxAuctionDuration(5000))))
-							.withMaxAuctionDuration(30 * 60 * 1000L))
-							//.withMaxAuctionDuration(5000L))
-					.addModel(SolverModel.builder())
-					.addEventHandler(TimeOutEvent.class, TimeOutEvent.ignoreHandler())
-					.build())
+			      .addConfigurations(mainConfigs(opFfdFactory, objFunc))
+			      .addScenario(scenario)
+//			      .addConfiguration(MASConfiguration.pdptwBuilder()
+//							.addEventHandler(AddDepotEvent.class, AddDepotEvent.defaultHandler())
+//							.addEventHandler(AddParcelEvent.class, AddParcelEvent.defaultHandler())
+//							.addEventHandler(ChangeConnectionSpeedEvent.class, ChangeConnectionSpeedEvent.defaultHandler())
+//					.addEventHandler(AddVehicleEvent.class,
+//							DefaultTruckFactory.builder()
+//							.setCommunicator(RandomBidder.supplier())
+//							.setRouteAdjuster(RouteFollowingVehicle.delayAdjuster())
+//							.setRoutePlanner(RandomRoutePlanner.supplier())
+//							 .build())
+//					.addModel(AuctionCommModel.builder(DoubleBid.class)
+//							.withStopCondition(AuctionStopConditions.and(AuctionStopConditions.<DoubleBid>atLeastNumBids(2),
+//									AuctionStopConditions.<DoubleBid>or(AuctionStopConditions.<DoubleBid>allBidders(),
+//											AuctionStopConditions.<DoubleBid>maxAuctionDuration(5000))))
+//							.withMaxAuctionDuration(30 * 60 * 1000L))
+//							//.withMaxAuctionDuration(5000L))
+//					.addModel(SolverModel.builder())
+//					.addEventHandler(TimeOutEvent.class, TimeOutEvent.ignoreHandler())
+//					.build())
 				.showGui(View.builder()
-						//.with(RoadUserRenderer.builder().withToStringLabel())
-						//.with(RouteRenderer.builder())
-						//.with(PDPModelRenderer.builder())
+						.with(RoadUserRenderer.builder().withToStringLabel())
+						.with(RouteRenderer.builder())
+						.with(PDPModelRenderer.builder())
 						.with(GraphRoadModelRenderer.builder()
 								//.withStaticRelativeSpeedVisualization()
-								.withDynamicRelativeSpeedVisualization()
+								//.withDynamicRelativeSpeedVisualization()
 								)
 						.with(AuctionPanel.builder())
 							.with(RoutePanel.builder())
