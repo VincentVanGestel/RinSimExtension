@@ -47,6 +47,7 @@ import com.github.rinde.rinsim.experiment.ExperimentResults;
 import com.github.rinde.rinsim.experiment.MASConfiguration;
 import com.github.rinde.rinsim.experiment.PostProcessor;
 import com.github.rinde.rinsim.experiment.PostProcessors;
+import com.github.rinde.rinsim.geom.GeomHeuristic;
 import com.github.rinde.rinsim.geom.GeomHeuristics;
 import com.github.rinde.rinsim.geom.Graph;
 import com.github.rinde.rinsim.geom.ListenableGraph;
@@ -115,9 +116,8 @@ public class ExperimentRunner {
 	 */
 	public static void main(String[] args) throws IOException {
 		
-		//args = new String[]{ "e", "easy", "1", "1"};
-		//args = new String[]{"e", "ssh1cllsml", "1", "1", "local"};
-		//args = new String[]{"g", "generateTest", "10", "1", "false", "16", "1800000", "3", "0.5"};
+		//args = new String[]{ "e", "easy", "1", "1", "t"};
+		//args = new String[]{"e", "ssh1cllsml", "1", "1", "local", "c"};
 		//args = new String[]{"g", "generateTest", "10", "1", "true", "32", "900000", "3", "0.5", "low"};
 		//args = new String[]{"g", "ssh1cllsml", "2", "1", "false", "32", "7200000", "4", "0.5", "low"};
 		//args = new String[]{"v", "generateTest", "10", "0"};		
@@ -178,11 +178,12 @@ public class ExperimentRunner {
 			
 			generateDataset(graphPath, datasetID, numberOfBuckets, bucket, cache);
 		} else if(args[0].equalsIgnoreCase("e") || args[0].equalsIgnoreCase("experiment")) {
-			if(args.length < 5) {
-				throw new IllegalArgumentException("Usage: experiment DatasetID #Buckets BucketID Local/Distributed");
+			if(args.length < 6) {
+				throw new IllegalArgumentException("Usage: experiment DatasetID #Buckets BucketID Local/Distributed Heuristic");
 			}
 			boolean local = parseLocal(args[4]);
-			performExperiment(datasetID, numberOfBuckets, bucket, local);
+			GeomHeuristic heuristic = parseHeuristic(args[5]);
+			performExperiment(datasetID, numberOfBuckets, bucket, local, heuristic);
 		} else {
 			throw new IllegalArgumentException("Usage: args = [ g/e/v datasetID #buckets bucketID {Generate Options}]");
 		}
@@ -255,6 +256,16 @@ public class ExperimentRunner {
 			return true;
 		} else {
 			return false;
+		}
+	}
+	
+	private static GeomHeuristic parseHeuristic(String heuristic) {
+		if(heuristic.equalsIgnoreCase("t") || heuristic.equalsIgnoreCase("theoretical")) {
+			return GeomHeuristics.theoreticalTime(70d);
+		} else if(heuristic.equalsIgnoreCase("c") || heuristic.equalsIgnoreCase("current")) {
+			return GeomHeuristics.time(70d);
+		} else {
+			return null;
 		}
 	}
 
@@ -391,7 +402,7 @@ public class ExperimentRunner {
 
 	}
 
-	public static void performExperiment(String dataset, int numberOfBuckets, int bucket, boolean local) {
+	public static void performExperiment(String dataset, int numberOfBuckets, int bucket, boolean local, GeomHeuristic heuristic) {
 		System.out.println(System.getProperty("java.vm.name") + ", "
 			      + System.getProperty("java.vm.vendor") + ", "
 			      + System.getProperty("java.vm.version") + " (runtime version: "
@@ -430,7 +441,7 @@ public class ExperimentRunner {
 	    
 	    final OptaplannerSolvers.Builder opFfdFactory =
 	    	      OptaplannerSolvers.builder()
-	    	      	.withSolverHeuristic(GeomHeuristics.time(70d));
+	    	      	.withSolverHeuristic(heuristic);
 	    	      //.withSolverXmlResource(
 	    	      //  "com/github/rinde/jaamas16/jaamas-solver.xml")
 	    	      //.withUnimprovedMsLimit(rpMs)
