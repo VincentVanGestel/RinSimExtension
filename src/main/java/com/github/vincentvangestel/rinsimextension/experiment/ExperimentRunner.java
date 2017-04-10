@@ -25,12 +25,15 @@ import com.github.rinde.logistics.pdptw.mas.comm.AuctionPanel;
 import com.github.rinde.logistics.pdptw.mas.comm.AuctionStopConditions;
 import com.github.rinde.logistics.pdptw.mas.comm.AuctionTimeStatsLogger;
 import com.github.rinde.logistics.pdptw.mas.comm.DoubleBid;
+import com.github.rinde.logistics.pdptw.mas.comm.RandomBidder;
 import com.github.rinde.logistics.pdptw.mas.comm.RtSolverBidder;
 import com.github.rinde.logistics.pdptw.mas.comm.RtSolverBidder.BidFunction;
 import com.github.rinde.logistics.pdptw.mas.comm.RtSolverBidder.BidFunctions;
+import com.github.rinde.logistics.pdptw.mas.route.RandomRoutePlanner;
 import com.github.rinde.logistics.pdptw.mas.route.RoutePlannerStatsLogger;
 import com.github.rinde.logistics.pdptw.mas.route.RtSolverRoutePlanner;
 import com.github.rinde.logistics.pdptw.solver.optaplanner.OptaplannerSolvers;
+import com.github.rinde.rinsim.central.SolverModel;
 import com.github.rinde.rinsim.central.rt.RtCentral;
 import com.github.rinde.rinsim.central.rt.RtSolverModel;
 import com.github.rinde.rinsim.core.Simulator;
@@ -66,6 +69,7 @@ import com.github.rinde.rinsim.pdptw.common.RouteRenderer;
 import com.github.rinde.rinsim.pdptw.common.StatisticsDTO;
 import com.github.rinde.rinsim.pdptw.common.TimeLinePanel;
 import com.github.rinde.rinsim.scenario.Scenario;
+import com.github.rinde.rinsim.scenario.ScenarioConverters;
 import com.github.rinde.rinsim.scenario.ScenarioIO;
 import com.github.rinde.rinsim.scenario.TimeOutEvent;
 import com.github.rinde.rinsim.scenario.TimedEvent;
@@ -92,12 +96,12 @@ public class ExperimentRunner {
 	private static final int NUM_INSTANCES = 10;
 	private static final long MS_IN_MIN = 60000L;
 	private static final long MS_IN_H = 60 * MS_IN_MIN;
-	private static final double TWENTYFIVE_KMH_IN_KMS = 0.00694444444;
+	private static final double TWENTYFIVE_KMH_IN_KMMS = 0.00000694444444;
 	private static final Function<Long, Double> DEFAULT_SPEED_FUNCTION =
 			new Function<Long, Double>() {
 		@Override
 		public Double apply(Long input) {
-			return TWENTYFIVE_KMH_IN_KMS;
+			return TWENTYFIVE_KMH_IN_KMMS;
 		}
 	};
 
@@ -122,15 +126,14 @@ public class ExperimentRunner {
 		//args = new String[]{"g", "ssh1cllsml", "2", "1", "false", "32", "7200000", "4", "0.5", "low"};
 		//args = new String[]{"v", "generateTest", "10", "0"};		
 		
-		
 		if(args.length < 2) {
 			throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID {Generate Options}]");
 		}
 		
 		//String graphPath = new String("/home/vincent/Dropbox/UNI/Thesis/eclipse_workspace/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
 		//String graphPath = new String("/home/r0373187/Thesis/RinSimExtension/files/maps/dot/leuven-large-pruned.dot");
-		String graphPath = new String("files/maps/dot/leuven-large-pruned.dot");
-		String cachePath = new String("files/maps/dot/leuven-large-pruned.cache");
+		String graphPath = new String("files/maps/dot/leuven-large-simplified.dot");
+		String cachePath = new String("files/maps/dot/leuven-large-simplified.cache");
 		String datasetID = args[1].toLowerCase();		
 		
 		int numberOfBuckets = Integer.parseInt(args[2]);
@@ -294,6 +297,7 @@ public class ExperimentRunner {
 	
 	public static void generateDataset(String graphPath, String dataset, int numberOfBuckets, int bucket, Optional<String> cachePath) {
 		DatasetGenerator.Builder b = DatasetGenerator.builder()
+			.setNumThreads(1)
 			.withGraphSupplier(
 				DotGraphIO.getMultiAttributeDataGraphSupplier(graphPath))
 		    .setDynamismLevels(Lists.newArrayList(.2, .5, .8))
@@ -333,7 +337,7 @@ public class ExperimentRunner {
 		
 		scenario = ScenarioIO.reader().apply(fileList[index].toPath());
 		
-		//scenario = ScenarioConverters.toSimulatedtime().apply(scenario);
+//		scenario = ScenarioConverters.toSimulatedtime().apply(scenario);
 		
 		final ObjectiveFunction objFunc = Gendreau06ObjectiveFunction.instance(70);
 	    final long rpMs = 100L;
@@ -386,7 +390,7 @@ public class ExperimentRunner {
 						.with(PDPModelRenderer.builder())
 						.with(GraphRoadModelRenderer.builder()
 								//.withStaticRelativeSpeedVisualization()
-								//.withDynamicRelativeSpeedVisualization()
+								.withDynamicRelativeSpeedVisualization()
 								)
 						.with(AuctionPanel.builder())
 							.with(RoutePanel.builder())
