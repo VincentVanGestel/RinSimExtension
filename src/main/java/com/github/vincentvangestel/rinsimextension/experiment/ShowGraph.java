@@ -26,7 +26,7 @@ public class ShowGraph {
 
 	public static void main(String[] args) throws IOException {
 
-		Graph<MultiAttributeData> graph = DotGraphIO.getMultiAttributeGraphIO().read("files/maps/dot/leuven-large-simplified-50-1.dot");
+		Graph<MultiAttributeData> graph = DotGraphIO.getMultiAttributeGraphIO().read("files/maps/dot/leuven-large-simplified-50.dot");
 		
 		Scenario s = Scenario.builder()
 				.addModel(RoadModelBuilders.staticGraph(graph))
