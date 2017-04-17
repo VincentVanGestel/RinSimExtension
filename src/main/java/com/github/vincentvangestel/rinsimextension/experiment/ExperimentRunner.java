@@ -121,9 +121,10 @@ public class ExperimentRunner {
 	public static void main(String[] args) throws IOException {
 		
 		//args = new String[]{ "e", "easy", "1", "1", "t"};
-		//args = new String[]{"e", "ssh1cllsml", "1", "1", "local", "c"};
+		//args = new String[]{"e", "ssh1cllsml", "5", "1", "local", "c"};
 		//args = new String[]{"g", "generateTest", "10", "1", "true", "32", "900000", "3", "0.5", "low"};
 		//args = new String[]{"g", "ssh1cllsml", "2", "1", "false", "32", "7200000", "4", "0.5", "low"};
+		args = new String[]{"v", "ssh1cllsml", "5", "0"};
 		//args = new String[]{"v", "generateTest", "10", "0"};		
 		
 		if(args.length < 2) {
@@ -359,11 +360,11 @@ public class ExperimentRunner {
 	    
 		ExperimentResults results = Experiment.builder()
 				  .computeLocal()  
-			      .withRandomSeed(123)
+			      .withRandomSeed(7919)
 			      .repeat(1)
 			      .withThreads(1)
 			      .usePostProcessor(new LogProcessor(objFunc))
-			      .addConfigurations(mainConfigs(opFfdFactory, objFunc))
+			      .addConfigurations(mainConfigs(opFfdFactory, objFunc, GeomHeuristics.time(70d)))
 			      .addScenario(scenario)
 //			      .addConfiguration(MASConfiguration.pdptwBuilder()
 //							.addEventHandler(AddDepotEvent.class, AddDepotEvent.defaultHandler())
@@ -463,7 +464,7 @@ public class ExperimentRunner {
 	    }
 	    
 		ExperimentResults results = exBuilder
-			      .withRandomSeed(123)
+			      .withRandomSeed(7919)
 			      .repeat(1)
 			      .withWarmup(30000)
 			      .addResultListener(new CommandLineProgress(System.out))
@@ -472,7 +473,7 @@ public class ExperimentRunner {
 			    		  dataset, bucket,
 			    		  (Gendreau06ObjectiveFunction)objFunc))
 			      .usePostProcessor(new LogProcessor(objFunc))
-			      .addConfigurations(mainConfigs(opFfdFactory, objFunc))
+			      .addConfigurations(mainConfigs(opFfdFactory, objFunc, heuristic))
 				.addScenarios(scenarios)
 				.perform();
 		
@@ -481,14 +482,15 @@ public class ExperimentRunner {
 	}
 
 	static List<MASConfiguration> mainConfigs(
-			OptaplannerSolvers.Builder opFfdFactory, ObjectiveFunction objFunc) {
+			OptaplannerSolvers.Builder opFfdFactory, ObjectiveFunction objFunc,
+			GeomHeuristic heuristic) {
 		final long rpMs = 100;
 		final long bMs = 20;
 		final long maxAuctionDurationSoft = 10000L;
 
 		final List<MASConfiguration> configs = new ArrayList<>();
 		configs.add(createMAS(opFfdFactory, objFunc, rpMs, bMs,
-				maxAuctionDurationSoft, false, 0L, false));
+				maxAuctionDurationSoft, false, 0L, false, heuristic));
 		final String solverKey =
 				"Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation";
 
@@ -496,16 +498,18 @@ public class ExperimentRunner {
 		configs.add(createCentral(
 				opFfdFactory.withSolverXmlResource(
 						"com/github/rinde/jaamas16/jaamas-solver.xml")
+				.withSolverHeuristic(heuristic)
 				.withName(solverKey)
 				.withUnimprovedMsLimit(centralUnimprovedMs),
-				"OP.RT-FFD-" + solverKey));
+				"OP.RT-FFD-" + solverKey, heuristic));
 		return configs;
 	}
 
 	static MASConfiguration createMAS(OptaplannerSolvers.Builder opFfdFactory,
 			ObjectiveFunction objFunc, long rpMs, long bMs,
 			long maxAuctionDurationSoft, boolean enableReauctions,
-			long reauctCooldownPeriodMs, boolean computationsLogging) {
+			long reauctCooldownPeriodMs, boolean computationsLogging,
+			GeomHeuristic heuristic) {
 		final BidFunction bf = BidFunctions.BALANCED_HIGH;
 		final String masSolverName =
 				"Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation";
@@ -531,6 +535,7 @@ public class ExperimentRunner {
 						.setRoutePlanner(RtSolverRoutePlanner.supplier(
 								opFfdFactory.withSolverXmlResource(
 										"com/github/rinde/jaamas16/jaamas-solver.xml")
+								.withSolverHeuristic(heuristic)
 								.withName(masSolverName)
 								.withUnimprovedMsLimit(rpMs)
 								.withTimeMeasurementsEnabled(computationsLogging)
@@ -540,10 +545,12 @@ public class ExperimentRunner {
 								RtSolverBidder.realtimeBuilder(objFunc,
 										opFfdFactory.withSolverXmlResource(
 												"com/github/rinde/jaamas16/jaamas-solver.xml")
+										.withSolverHeuristic(heuristic)
 										.withName(masSolverName)
 										.withUnimprovedMsLimit(bMs)
 										.withTimeMeasurementsEnabled(computationsLogging)
 										.buildRealtimeSolverSupplier())
+								.withGeomHeuristic(heuristic)
 								.withBidFunction(bf)
 								.withReauctionsEnabled(enableReauctions)
 								.withReauctionCooldownPeriod(reauctCooldownPeriodMs))
@@ -574,14 +581,14 @@ public class ExperimentRunner {
 	}
 	
 	static void addCentral(Experiment.Builder experimentBuilder,
-			OptaplannerSolvers.Builder opBuilder, String name) {
-		experimentBuilder.addConfiguration(createCentral(opBuilder, name));
+			OptaplannerSolvers.Builder opBuilder, String name, GeomHeuristic heuristic) {
+		experimentBuilder.addConfiguration(createCentral(opBuilder, name, heuristic));
 	}
 
 	static MASConfiguration createCentral(OptaplannerSolvers.Builder opBuilder,
-			String name) {
+			String name, GeomHeuristic heuristic) {
 		return MASConfiguration.pdptwBuilder()
-				.addModel(RtCentral.builder(opBuilder.buildRealtimeSolverSupplier())
+				.addModel(RtCentral.builder(opBuilder.withSolverHeuristic(heuristic).buildRealtimeSolverSupplier())
 						.withContinuousUpdates(true)
 //						.withThreadGrouping(true)
 						)
