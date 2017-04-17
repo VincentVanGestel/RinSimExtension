@@ -124,7 +124,7 @@ public class ExperimentRunner {
 		//args = new String[]{"e", "ssh1cllsml", "5", "1", "local", "c"};
 		//args = new String[]{"g", "generateTest", "10", "1", "true", "32", "900000", "3", "0.5", "low"};
 		//args = new String[]{"g", "ssh1cllsml", "2", "1", "false", "32", "7200000", "4", "0.5", "low"};
-		args = new String[]{"v", "ssh1cllsml", "5", "0"};
+		//args = new String[]{"v", "ssh1cllsml", "5", "0"};
 		//args = new String[]{"v", "generateTest", "10", "0"};		
 		
 		if(args.length < 2) {
