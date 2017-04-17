@@ -83,6 +83,7 @@ import com.github.rinde.rinsim.util.StochasticSupplier;
 import com.github.rinde.rinsim.util.StochasticSuppliers;
 import com.github.vincentvangestel.rinsimextension.vehicle.Taxi;
 import com.github.vincentvangestel.roadmodelext.ShortestPathCache;
+import com.github.vincentvangestel.roadmodelext.ShortestPathCache.StaticSPCacheSup;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -122,6 +123,7 @@ public class ExperimentRunner {
 		
 		//args = new String[]{ "e", "easy", "1", "1", "t"};
 		//args = new String[]{"e", "ssh1cllsml", "5", "1", "local", "c"};
+		//args = new String[]{"e", "generateTest", "1", "1", "local", "t"};
 		//args = new String[]{"g", "generateTest", "10", "1", "true", "32", "900000", "3", "0.5", "low"};
 		//args = new String[]{"g", "ssh1cllsml", "2", "1", "false", "32", "7200000", "4", "0.5", "low"};
 		//args = new String[]{"v", "ssh1cllsml", "5", "0"};
@@ -298,7 +300,7 @@ public class ExperimentRunner {
 	
 	public static void generateDataset(String graphPath, String dataset, int numberOfBuckets, int bucket, Optional<String> cachePath) {
 		DatasetGenerator.Builder b = DatasetGenerator.builder()
-			.setNumThreads(1)
+			//.setNumThreads(1)
 			.withGraphSupplier(
 				DotGraphIO.getMultiAttributeDataGraphSupplier(graphPath))
 		    .setDynamismLevels(Lists.newArrayList(.2, .5, .8))
@@ -316,7 +318,8 @@ public class ExperimentRunner {
 			.setShockwaveDuration(shockwaveDurations)
 			.setShockwaveCreationTimes(shockwaveCreationTimes);
 		if(cachePath.isPresent()) {
-			b.withCacheSupplier(ShortestPathCache.getShortestPathCacheSupplier(cachePath.get()));
+			//b.withCacheSupplier(ShortestPathCache.getShortestPathCacheSupplier(cachePath.get()));
+			b.withCachePath(cachePath.get());
 		}
 			b.build()
 			.generate();
@@ -466,7 +469,8 @@ public class ExperimentRunner {
 		ExperimentResults results = exBuilder
 			      .withRandomSeed(7919)
 			      .repeat(1)
-			      .withWarmup(30000)
+			      //.withThreads(1)
+			      //.withWarmup(30000)
 			      .addResultListener(new CommandLineProgress(System.out))
 			      .addResultListener(new VanLonHolvoetResultWriter(
 			    		  new File("files/results/" + dataset),
