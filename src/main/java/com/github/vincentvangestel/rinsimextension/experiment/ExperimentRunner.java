@@ -4,6 +4,9 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -38,8 +41,11 @@ import com.github.rinde.rinsim.central.rt.RtCentral;
 import com.github.rinde.rinsim.central.rt.RtSolverModel;
 import com.github.rinde.rinsim.core.Simulator;
 import com.github.rinde.rinsim.core.SimulatorAPI;
+import com.github.rinde.rinsim.core.model.ModelBuilder;
 import com.github.rinde.rinsim.core.model.pdp.DefaultPDPModel;
+import com.github.rinde.rinsim.core.model.road.DynamicGraphRoadModel;
 import com.github.rinde.rinsim.core.model.road.RoadModelBuilders;
+import com.github.rinde.rinsim.core.model.road.RoadUser;
 import com.github.rinde.rinsim.core.model.time.RealtimeClockLogger;
 import com.github.rinde.rinsim.core.model.time.RealtimeClockLogger.LogEntry;
 import com.github.rinde.rinsim.core.model.time.RealtimeTickInfo;
@@ -82,6 +88,7 @@ import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
 import com.github.rinde.rinsim.util.StochasticSupplier;
 import com.github.rinde.rinsim.util.StochasticSuppliers;
 import com.github.vincentvangestel.rinsimextension.vehicle.Taxi;
+import com.github.vincentvangestel.roadmodelext.CachedDynamicGraphRoadModel;
 import com.github.vincentvangestel.roadmodelext.ShortestPathCache;
 import com.github.vincentvangestel.roadmodelext.ShortestPathCache.StaticSPCacheSup;
 import com.google.auto.value.AutoValue;
@@ -127,7 +134,9 @@ public class ExperimentRunner {
 		//args = new String[]{"g", "generateTest", "10", "1", "true", "32", "900000", "3", "0.5", "low"};
 		//args = new String[]{"g", "ssh1cllsml", "2", "1", "false", "32", "7200000", "4", "0.5", "low"};
 		//args = new String[]{"v", "ssh1cllsml", "5", "0"};
-		//args = new String[]{"v", "generateTest", "10", "0"};		
+		//args = new String[]{"v", "generateTest", "10", "0"};
+		//args = new String[]{"v", "ssh1tllsml", "10", "0"};
+		//args = new String[]{"c", "ssh1cllsml", "ssh1tllsml"};
 		
 		if(args.length < 2) {
 			throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID {Generate Options}]");
@@ -138,6 +147,11 @@ public class ExperimentRunner {
 		String graphPath = new String("files/maps/dot/leuven-large-simplified.dot");
 		String cachePath = new String("files/maps/dot/leuven-large-simplified.cache");
 		String datasetID = args[1].toLowerCase();		
+		
+		if(args[0].equalsIgnoreCase("c") || args[0].equalsIgnoreCase("convert")) {
+			convertDataset(graphPath, datasetID, args[2].toLowerCase(), cachePath);
+			System.exit(0);
+		}
 		
 		int numberOfBuckets = Integer.parseInt(args[2]);
 		int bucket = Integer.parseInt(args[3]);
@@ -296,6 +310,48 @@ public class ExperimentRunner {
 	public static void readGraph(String file) throws IOException {
 		Supplier<Graph<MultiAttributeData>> g = DotGraphIO.getMultiAttributeDataGraphSupplier(file);
 		readGraph(g);
+	}
+	
+	public static void convertDataset(String graphPath, String datasetFrom, String datasetTo, String cachePath) {
+		List<Scenario> scenarios = new ArrayList<>();
+		
+		File dir = new File("files/datasets/" + datasetFrom + "/");
+		File[] fileList = dir.listFiles(new FilenameFilter()
+		{ 
+        	public boolean accept(File dir, String filename) {
+        		return filename.endsWith(".scen");
+        	}
+		});
+		Arrays.sort(fileList);
+		System.out.println("Converting Datasets");
+		
+		try {
+			Files.createDirectories(Paths.get("files/datasets/" + datasetTo + "/"));
+		} catch (IOException e1) {
+			System.out.println("Failed creating output directory");
+			e1.printStackTrace();
+		}
+		
+		for(File f : fileList) {
+			try {
+				ScenarioIO.write(
+				Scenario.builder(ScenarioIO.reader().apply(f.toPath()))
+					.removeModelsOfType(PDPDynamicGraphRoadModel.Builder.class)
+					.addModel(PDPDynamicGraphRoadModel
+							.builderForDynamicGraphRm(CachedDynamicGraphRoadModel
+									.builder(ListenableGraph.supplier(
+											(Supplier<? extends Graph<MultiAttributeData>>) DotGraphIO.getMultiAttributeDataGraphSupplier(graphPath)),
+											null, cachePath)
+									.withSpeedUnit(NonSI.KILOMETERS_PER_HOUR)
+									.withDistanceUnit(SI.KILOMETER))
+							.withAllowVehicleDiversion(true)).build(), Paths.get("files/datasets/" + datasetTo + "/" + f.getName()));
+			} catch (IOException e) {
+				System.out.println("Failed converting file: " + f.getName());
+				e.printStackTrace();
+			}
+		}
+		System.out.println("Done");
+		
 	}
 	
 	public static void generateDataset(String graphPath, String dataset, int numberOfBuckets, int bucket, Optional<String> cachePath) {
