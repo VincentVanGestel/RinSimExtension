@@ -343,7 +343,8 @@ public class ExperimentRunner {
 											(Supplier<? extends Graph<MultiAttributeData>>) DotGraphIO.getMultiAttributeDataGraphSupplier(graphPath)),
 											null, cachePath)
 									.withSpeedUnit(NonSI.KILOMETERS_PER_HOUR)
-									.withDistanceUnit(SI.KILOMETER))
+									.withDistanceUnit(SI.KILOMETER)
+									.withModificationCheck(false))
 							.withAllowVehicleDiversion(true)).build(), Paths.get("files/datasets/" + datasetTo + "/" + f.getName()));
 			} catch (IOException e) {
 				System.out.println("Failed converting file: " + f.getName());
