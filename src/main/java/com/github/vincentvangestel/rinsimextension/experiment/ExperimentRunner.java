@@ -133,6 +133,7 @@ public class ExperimentRunner {
 		//args = new String[]{"e", "generateTest", "1", "1", "local", "t"};
 		//args = new String[]{"g", "generateTest", "10", "1", "true", "32", "900000", "3", "0.5", "low"};
 		//args = new String[]{"g", "ssh1cllsml", "2", "1", "false", "32", "7200000", "4", "0.5", "low"};
+		//args = new String[]{"g", "h0c", "1", "1", "false", "0", "0", "0", "1", "low"};
 		//args = new String[]{"v", "ssh1cllsml", "5", "0"};
 		//args = new String[]{"v", "generateTest", "10", "0"};
 		//args = new String[]{"v", "ssh1tllsml", "10", "0"};
@@ -257,7 +258,10 @@ public class ExperimentRunner {
 		String[] numberOfShockwavesStrings = numberOfShockwavesListString.split(",");
 		List<Integer> numberOfShockwaves = new ArrayList<>();
 		for(String numberOfShockwavesString : numberOfShockwavesStrings) {
-			numberOfShockwaves.add(Integer.parseInt(numberOfShockwavesString) * modifier);
+			int nos = Integer.parseInt(numberOfShockwavesString);
+			if(nos != 0) {
+				numberOfShockwaves.add(nos * modifier);
+			}
 		}
 		return numberOfShockwaves;
 	}
