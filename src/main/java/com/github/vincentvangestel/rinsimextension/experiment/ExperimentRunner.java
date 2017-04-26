@@ -128,12 +128,12 @@ public class ExperimentRunner {
 	 */
 	public static void main(String[] args) throws IOException {
 		
-		//args = new String[]{ "e", "easy", "1", "1", "t"};
+	    //args = new String[]{ "e", "profiler", "30", "1", "local", "t"};
 		//args = new String[]{"e", "ssh1cllsml", "5", "1", "local", "c"};
 		//args = new String[]{"e", "generateTest", "1", "1", "local", "t"};
 		//args = new String[]{"g", "generateTest", "10", "1", "true", "32", "900000", "3", "0.5", "low"};
 		//args = new String[]{"g", "ssh1cllsml", "2", "1", "false", "32", "7200000", "4", "0.5", "low"};
-		//args = new String[]{"g", "h0c", "1", "1", "false", "0", "0", "0", "1", "low"};
+		//args = new String[]{"g", "profiler", "1", "1", "true", "16", "1800000", "2", "0.5", "low"};
 		//args = new String[]{"v", "ssh1cllsml", "5", "0"};
 		//args = new String[]{"v", "generateTest", "10", "0"};
 		//args = new String[]{"v", "ssh1tllsml", "10", "0"};
@@ -787,7 +787,7 @@ public class ExperimentRunner {
         PostProcessors.statisticsPostProcessor(objectiveFunction)
           .collectResults(sim, args);
 
-      LOGGER.info("success: {}", args);
+      //LOGGER.info("success: {}", args);
       
 //      if(aStats.isPresent()) {
 //    	  System.out.println("Num Parcels: " + aStats.get().getNumParcels());
