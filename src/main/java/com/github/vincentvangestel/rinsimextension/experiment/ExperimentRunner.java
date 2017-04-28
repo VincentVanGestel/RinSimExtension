@@ -597,6 +597,7 @@ public class ExperimentRunner {
 				.addEventHandler(ChangeConnectionSpeedEvent.class, ChangeConnectionSpeedEvent.defaultHandler())
 				.addEventHandler(AddVehicleEvent.class,
 						DefaultTruckFactory.builder()
+						.setRouteHeuristic(heuristic)
 						.setRoutePlanner(RtSolverRoutePlanner.supplier(
 								opFfdFactory.withSolverXmlResource(
 										"com/github/rinde/jaamas16/jaamas-solver.xml")
@@ -662,7 +663,7 @@ public class ExperimentRunner {
 				.addEventHandler(AddDepotEvent.class, AddDepotEvent.defaultHandler())
 				.addEventHandler(AddParcelEvent.class, AddParcelEvent.defaultHandler())
 				.addEventHandler(ChangeConnectionSpeedEvent.class, ChangeConnectionSpeedEvent.defaultHandler())
-				.addEventHandler(AddVehicleEvent.class, RtCentral.vehicleHandler())
+				.addEventHandler(AddVehicleEvent.class, RtCentral.vehicleHandler(heuristic))
 				.setName(name)
 				.build();
 	}
