@@ -56,6 +56,7 @@ import com.github.rinde.rinsim.experiment.ExperimentResults;
 import com.github.rinde.rinsim.experiment.MASConfiguration;
 import com.github.rinde.rinsim.experiment.PostProcessor;
 import com.github.rinde.rinsim.experiment.PostProcessors;
+import com.github.rinde.rinsim.experiment.SimulationProperty;
 import com.github.rinde.rinsim.geom.GeomHeuristic;
 import com.github.rinde.rinsim.geom.GeomHeuristics;
 import com.github.rinde.rinsim.geom.Graph;
@@ -135,7 +136,7 @@ public class ExperimentRunner {
 		//args = new String[]{"g", "ssh1cllsml", "2", "1", "false", "32", "7200000", "4", "0.5", "low"};
 		//args = new String[]{"g", "profiler", "1", "1", "true", "16", "1800000", "2", "0.5", "low"};
 		//args = new String[]{"v", "ssh1cllsml", "5", "0"};
-		//args = new String[]{"v", "generateTest", "10", "0"};
+		args = new String[]{"v", "generateTest", "10", "0"};
 		//args = new String[]{"v", "ssh1tllsml", "10", "0"};
 		//args = new String[]{"c", "ssh1cllsml", "ssh1tllsml"};
 		
@@ -491,13 +492,14 @@ public class ExperimentRunner {
         	}
 		});
 		Arrays.sort(fileList);
-		int from = (bucket - 1) * (int)(fileList.length / numberOfBuckets);
-		int to = (bucket * (int)(fileList.length / numberOfBuckets));
-		System.out.println("Running Experiments from " + fileList[from].getName() + " to " + fileList[to-1].getName());
+		StringBuilder out = new StringBuilder();
+		out.append("Running Experiment on:");
 		
-		for(File f : Arrays.copyOfRange(fileList, from, to)) {
-			scenarios.add(ScenarioIO.reader().apply(f.toPath()));
+		for(int index = bucket - 1; index < fileList.length; index += numberOfBuckets) {
+			out.append(" " + fileList[index].getName());
+			scenarios.add(ScenarioIO.reader().apply(fileList[index].toPath()));
 		}
+		System.out.println(out.toString());
 
 		//Scenario s = ScenarioIO.reader().apply(Paths.get("files/datasets/" + dataset + "/0.50-20-1.00-0.scen"));
 	
@@ -531,7 +533,7 @@ public class ExperimentRunner {
 			      .withRandomSeed(7919)
 			      .repeat(1)
 			      //.withThreads(1)
-			      //.withWarmup(30000)
+			      .withWarmup(30000)
 			      .addResultListener(new CommandLineProgress(System.out))
 			      .addResultListener(new VanLonHolvoetResultWriter(
 			    		  new File("files/results/" + dataset),
@@ -539,10 +541,14 @@ public class ExperimentRunner {
 			    		  (Gendreau06ObjectiveFunction)objFunc))
 			      .usePostProcessor(new LogProcessor(objFunc))
 			      .addConfigurations(mainConfigs(opFfdFactory, objFunc, heuristic))
+			      .withOrdering(Lists.newArrayList(SimulationProperty.SEED_REPS,
+			    		  SimulationProperty.REPS,
+			    		  SimulationProperty.SCENARIO,
+			    		  SimulationProperty.CONFIG))
 				.addScenarios(scenarios)
 				.perform();
 		
-		System.out.println(results.toString());
+		//System.out.println(results.toString());
 		System.exit(0);
 	}
 
