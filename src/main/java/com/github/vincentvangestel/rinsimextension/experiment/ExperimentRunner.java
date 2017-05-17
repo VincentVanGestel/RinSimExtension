@@ -136,7 +136,7 @@ public class ExperimentRunner {
 		//args = new String[]{"g", "ssh1cllsml", "2", "1", "false", "32", "7200000", "4", "0.5", "low"};
 		//args = new String[]{"g", "profiler", "1", "1", "true", "16", "1800000", "2", "0.5", "low"};
 		//args = new String[]{"v", "ssh1cllsml", "5", "0"};
-		args = new String[]{"v", "generateTest", "10", "0"};
+		//args = new String[]{"v", "generateTest", "10", "0"};
 		//args = new String[]{"v", "ssh1tllsml", "10", "0"};
 		//args = new String[]{"c", "ssh1cllsml", "ssh1tllsml"};
 		
