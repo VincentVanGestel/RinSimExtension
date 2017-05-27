@@ -140,7 +140,7 @@ public class ExperimentRunner {
 		//args = new String[]{"v", "ssh1tllsml", "10", "0"};
 		//args = new String[]{"c", "ssh1cllsml", "ssh1tllsml"};
 		//args = new String[]{"g", "vis0", "1", "1", "false", "0", "0", "0", "1", "low"};
-		args = new String[]{"v", "vis0", "30", "0"};
+		//args = new String[]{"v", "vis0", "30", "0"};
 		
 		if(args.length < 2) {
 			throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID {Generate Options}]");
