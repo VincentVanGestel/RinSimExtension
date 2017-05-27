@@ -139,6 +139,8 @@ public class ExperimentRunner {
 		//args = new String[]{"v", "generateTest", "10", "0"};
 		//args = new String[]{"v", "ssh1tllsml", "10", "0"};
 		//args = new String[]{"c", "ssh1cllsml", "ssh1tllsml"};
+		//args = new String[]{"g", "vis0", "1", "1", "false", "0", "0", "0", "1", "low"};
+		args = new String[]{"v", "vis0", "30", "0"};
 		
 		if(args.length < 2) {
 			throw new IllegalArgumentException("Usage: args = [ g/e datasetID #buckets bucketID {Generate Options}]");
@@ -403,7 +405,7 @@ public class ExperimentRunner {
 		
 		scenario = ScenarioIO.reader().apply(fileList[index].toPath());
 		
-//		scenario = ScenarioConverters.toSimulatedtime().apply(scenario);
+		scenario = ScenarioConverters.toSimulatedtime().apply(scenario);
 		
 		final ObjectiveFunction objFunc = Gendreau06ObjectiveFunction.instance(70);
 	    final long rpMs = 100L;
@@ -421,35 +423,33 @@ public class ExperimentRunner {
 	    	      //.withName(masSolverName)
 	    	      //.withObjectiveFunction(objFunc);
 		
-		//final ObjectiveFunction objFunc = Gendreau06ObjectiveFunction.instance(70);
-	    
 		ExperimentResults results = Experiment.builder()
 				  .computeLocal()  
 			      .withRandomSeed(7919)
 			      .repeat(1)
 			      .withThreads(1)
 			      .usePostProcessor(new LogProcessor(objFunc))
-			      .addConfigurations(mainConfigs(opFfdFactory, objFunc, GeomHeuristics.time(70d)))
+			      //.addConfigurations(mainConfigs(opFfdFactory, objFunc, GeomHeuristics.time(70d)))
 			      .addScenario(scenario)
-//			      .addConfiguration(MASConfiguration.pdptwBuilder()
-//							.addEventHandler(AddDepotEvent.class, AddDepotEvent.defaultHandler())
-//							.addEventHandler(AddParcelEvent.class, AddParcelEvent.defaultHandler())
-//							.addEventHandler(ChangeConnectionSpeedEvent.class, ChangeConnectionSpeedEvent.defaultHandler())
-//					.addEventHandler(AddVehicleEvent.class,
-//							DefaultTruckFactory.builder()
-//							.setCommunicator(RandomBidder.supplier())
-//							.setRouteAdjuster(RouteFollowingVehicle.delayAdjuster())
-//							.setRoutePlanner(RandomRoutePlanner.supplier())
-//							 .build())
-//					.addModel(AuctionCommModel.builder(DoubleBid.class)
-//							.withStopCondition(AuctionStopConditions.and(AuctionStopConditions.<DoubleBid>atLeastNumBids(2),
-//									AuctionStopConditions.<DoubleBid>or(AuctionStopConditions.<DoubleBid>allBidders(),
-//											AuctionStopConditions.<DoubleBid>maxAuctionDuration(5000))))
-//							.withMaxAuctionDuration(30 * 60 * 1000L))
-//							//.withMaxAuctionDuration(5000L))
-//					.addModel(SolverModel.builder())
-//					.addEventHandler(TimeOutEvent.class, TimeOutEvent.ignoreHandler())
-//					.build())
+			      .addConfiguration(MASConfiguration.pdptwBuilder()
+							.addEventHandler(AddDepotEvent.class, AddDepotEvent.defaultHandler())
+							.addEventHandler(AddParcelEvent.class, AddParcelEvent.defaultHandler())
+							.addEventHandler(ChangeConnectionSpeedEvent.class, ChangeConnectionSpeedEvent.defaultHandler())
+					.addEventHandler(AddVehicleEvent.class,
+							DefaultTruckFactory.builder()
+							.setCommunicator(RandomBidder.supplier())
+							.setRouteAdjuster(RouteFollowingVehicle.delayAdjuster())
+							.setRoutePlanner(RandomRoutePlanner.supplier())
+							 .build())
+					.addModel(AuctionCommModel.builder(DoubleBid.class)
+							.withStopCondition(AuctionStopConditions.and(AuctionStopConditions.<DoubleBid>atLeastNumBids(2),
+									AuctionStopConditions.<DoubleBid>or(AuctionStopConditions.<DoubleBid>allBidders(),
+											AuctionStopConditions.<DoubleBid>maxAuctionDuration(5000))))
+							.withMaxAuctionDuration(30 * 60 * 1000L))
+							//.withMaxAuctionDuration(5000L))
+					.addModel(SolverModel.builder())
+					.addEventHandler(TimeOutEvent.class, TimeOutEvent.ignoreHandler())
+					.build())
 				.showGui(View.builder()
 						.with(RoadUserRenderer.builder().withToStringLabel())
 						.with(RouteRenderer.builder())
@@ -462,12 +462,11 @@ public class ExperimentRunner {
 							.with(RoutePanel.builder())
 							.with(TimeLinePanel.builder())
 							.withResolution(1280, 1024)
-							.withAutoPlay()
+							//.withAutoPlay()
 							.withAutoClose())
 		
 				.perform();
 		
-		System.out.println(results.toString());
 		System.exit(0);
 
 	}
@@ -501,10 +500,13 @@ public class ExperimentRunner {
 		}
 		System.out.println(out.toString());
 
-		//Scenario s = ScenarioIO.reader().apply(Paths.get("files/datasets/" + dataset + "/0.50-20-1.00-0.scen"));
-	
-		final ObjectiveFunction objFunc = Gendreau06ObjectiveFunction.instance(70);
-	    final long rpMs = 100L;
+		// Standard
+		//final ObjectiveFunction objFunc = Gendreau06ObjectiveFunction.instance(70);
+		
+		// Optimized for Tardiness
+		final ObjectiveFunction objFunc = Gendreau06ObjectiveFunction.instance(70, 1d, 10d, 1d);
+	    
+		final long rpMs = 100L;
 	    final long bMs = 20L;
 	    final BidFunction bf = BidFunctions.BALANCED_HIGH;
 	    final String masSolverName =
