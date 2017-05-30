@@ -5,7 +5,6 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,12 +39,8 @@ import com.github.rinde.rinsim.central.SolverModel;
 import com.github.rinde.rinsim.central.rt.RtCentral;
 import com.github.rinde.rinsim.central.rt.RtSolverModel;
 import com.github.rinde.rinsim.core.Simulator;
-import com.github.rinde.rinsim.core.SimulatorAPI;
-import com.github.rinde.rinsim.core.model.ModelBuilder;
 import com.github.rinde.rinsim.core.model.pdp.DefaultPDPModel;
-import com.github.rinde.rinsim.core.model.road.DynamicGraphRoadModel;
 import com.github.rinde.rinsim.core.model.road.RoadModelBuilders;
-import com.github.rinde.rinsim.core.model.road.RoadUser;
 import com.github.rinde.rinsim.core.model.time.RealtimeClockLogger;
 import com.github.rinde.rinsim.core.model.time.RealtimeClockLogger.LogEntry;
 import com.github.rinde.rinsim.core.model.time.RealtimeTickInfo;
@@ -80,7 +75,6 @@ import com.github.rinde.rinsim.scenario.ScenarioConverters;
 import com.github.rinde.rinsim.scenario.ScenarioIO;
 import com.github.rinde.rinsim.scenario.TimeOutEvent;
 import com.github.rinde.rinsim.scenario.TimedEvent;
-import com.github.rinde.rinsim.scenario.TimedEventHandler;
 import com.github.rinde.rinsim.scenario.gendreau06.Gendreau06ObjectiveFunction;
 import com.github.rinde.rinsim.ui.View;
 import com.github.rinde.rinsim.ui.renderers.GraphRoadModelRenderer;
@@ -88,10 +82,7 @@ import com.github.rinde.rinsim.ui.renderers.PDPModelRenderer;
 import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
 import com.github.rinde.rinsim.util.StochasticSupplier;
 import com.github.rinde.rinsim.util.StochasticSuppliers;
-import com.github.vincentvangestel.rinsimextension.vehicle.Taxi;
 import com.github.vincentvangestel.roadmodelext.CachedDynamicGraphRoadModel;
-import com.github.vincentvangestel.roadmodelext.ShortestPathCache;
-import com.github.vincentvangestel.roadmodelext.ShortestPathCache.StaticSPCacheSup;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -122,11 +113,6 @@ public class ExperimentRunner {
 	private static Optional<List<StochasticSupplier<Long>>> shockwaveDurations = Optional.absent();
 	private static Optional<List<StochasticSupplier<Long>>> shockwaveCreationTimes = Optional.absent();
 
-	/**
-	 * Usage: args = [ generate/experiment datasetID #buckets bucketID]
-	 * @param args
-	 * @throws IOException
-	 */
 	public static void main(String[] args) throws IOException {
 		
 	    //args = new String[]{ "e", "profiler", "30", "1", "local", "t"};
@@ -211,46 +197,6 @@ public class ExperimentRunner {
 		} else {
 			throw new IllegalArgumentException("Usage: args = [ g/e/v datasetID #buckets bucketID {Generate Options}]");
 		}
-
-		/**
-		 * Comment this if you don't want a new graph to be constructed!
-		 */
-		/**
-		 Graph<MultiAttributeData> g = new OsmConverter()
-		  .setOutputDir("files/maps/dot")
-		  .withOutputName("leuven-large-pruned.dot")
-		  .withPruner(new CenterPruner())
-		  .convert("files/maps/osm/leuven-large.osm");
-		 /**/
-		
-		
-		// readGraph("files/maps/dot/leuven-large-pruned.dot");
-		// readGraph("files/maps/brussels-simple.dot");
-
-		//Graph<MultiAttributeData> g = returnGraph(graphPath);
-		// Graph<MultiAttributeData> g =
-		// returnGraph("files/maps/dot/leuven-large-double-pruned.dot");
-		// Graph<MultiAttributeData> g =
-		// returnGraph("files/maps/dot/leuven-large-double-pruned-second-center-WRONG.dot");
-
-		// g = new RoundAboutPruner().prune(g);
-		// g = new CenterPruner().prune(g);
-		// g = GraphPruner.pruneRoads(g, Lists.newArrayList("Bondgenotenlaan"),
-		// false);
-
-		// Spanned Area
-		// List<Point> extremes = Graphs.getExtremes(g);
-		// System.out.println("Spanned Area: " + Math.abs(extremes.get(0).x -
-		// extremes.get(1).x) + " by " + Math.abs(extremes.get(0).y -
-		// extremes.get(1).y));
-		// System.out.println("Diagonal: " + Point.distance(extremes.get(0),
-		// extremes.get(1)));
-
-		// readGraph(g);
-		// DotGraphIO.getMultiAttributeGraphIO().write(g,
-		// "files/maps/dot/leuven-large-double-pruned-second-center-WRONG.dot");
-
-		//Optional<String> dataset = Optional.of("files/datasets/0.50-20-1.00-0.scen");
 	}
 
 	private static Optional<List<StochasticSupplier<Function<Long, Double>>>> defaultShockwaveSpeed(int size) {
@@ -690,28 +636,6 @@ public class ExperimentRunner {
 		}
 
 		return events;
-	}
-
-	enum CustomVehicleHandler implements TimedEventHandler<AddVehicleEvent> {
-		INSTANCE {
-			public void handleTimedEvent(AddVehicleEvent event, SimulatorAPI sim) {
-				// sim.register(new Truck(event.getVehicleDTO(), new
-				// GotoClosestRoutePlanner(), null, null, false));
-				sim.register(new Taxi(event.getVehicleDTO()));
-			}
-		};
-	}
-
-	enum CustomParcelHandler implements TimedEventHandler<AddParcelEvent> {
-		INSTANCE {
-			public void handleTimedEvent(AddParcelEvent event, SimulatorAPI sim) {
-				// System.out.println("Registered parcel at " +
-				// event.getParcelDTO().getPickupLocation()
-				// + " bound to: " +
-				// event.getParcelDTO().getDeliveryLocation());
-				AddParcelEvent.defaultHandler().handleTimedEvent(event, sim);
-			}
-		};
 	}
 
 	  @AutoValue
