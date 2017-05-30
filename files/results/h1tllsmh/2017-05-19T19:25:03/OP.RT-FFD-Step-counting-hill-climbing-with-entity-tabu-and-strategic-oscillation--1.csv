@@ -1,0 +1,9 @@
+dynamism,urgency,scale,cost,travel_time,tardiness,over_time,is_valid,scenario_id,random_seed,repetition,comp_time,num_vehicles,num_orders,num_reauctions,num_unsuc_reauctions,num_failed_reauctions
+dynamism,urgency,scale,cost,travel_time,tardiness,over_time,is_valid,scenario_id,random_seed,repetition,comp_time,num_vehicles,num_orders,num_reauctions,num_unsuc_reauctions,num_failed_reauctions
+0.2,20,5.0,-1,-1,-1,-1,false,0.20-20-5.00-6,7919,0,-1,50,600,-1,-1,-1
+0.2,20,5.0,-1,-1,-1,-1,false,0.20-20-5.00-0,7919,0,-1,50,600,-1,-1,-1
+0.2,20,5.0,139333.38243333335,16560.785616666668,111449.64681666666,11322.95,true,0.20-20-5.00-0,7919,0,9021005,50,600,0,0,0
+0.2,20,5.0,140900.01318333333,16500.249,113159.34751666666,11240.416666666666,true,0.20-20-5.00-6,7919,0,9313094,50,600,0,0,0
+0.5,20,5.0,147842.90541666665,16844.56448333333,119375.29093333334,11623.05,true,0.50-20-5.00-2,7919,0,11811992,50,600,0,0,0
+0.5,20,5.0,157999.88571666667,17373.80075,128545.2683,12080.816666666668,true,0.50-20-5.00-8,7919,0,11479244,50,600,0,0,0
+0.8,20,5.0,146537.02718333332,16937.0252,117920.15198333333,11679.85,true,0.80-20-5.00-4,7919,0,12329331,50,600,0,0,0

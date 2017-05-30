@@ -1,0 +1,6 @@
+problem-class,instance,config,random-seed,repetition,rt-tick-infos,avg-interarrival-time,rt-count,st-count
+0.50-20-5.00,1,ReAuction-FFD-Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation-RP-100-BID-20-BALANCED_HIGH-NO-REAUCT-heuristic-GeomHeuristics.time(70.0),7919,0,4909,999996163,6354,21211
+0.20-20-5.00,5,ReAuction-FFD-Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation-RP-100-BID-20-BALANCED_HIGH-NO-REAUCT-heuristic-GeomHeuristics.time(70.0),7919,0,6053,999991462,7565,22735
+0.50-20-5.00,7,ReAuction-FFD-Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation-RP-100-BID-20-BALANCED_HIGH-NO-REAUCT-heuristic-GeomHeuristics.time(70.0),7919,0,4963,1000008119,6637,21695
+0.80-20-5.00,3,ReAuction-FFD-Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation-RP-100-BID-20-BALANCED_HIGH-NO-REAUCT-heuristic-GeomHeuristics.time(70.0),7919,0,5072,1000109495,6766,20585
+0.80-20-5.00,9,ReAuction-FFD-Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation-RP-100-BID-20-BALANCED_HIGH-NO-REAUCT-heuristic-GeomHeuristics.time(70.0),7919,0,7208,1000003207,8726,20759

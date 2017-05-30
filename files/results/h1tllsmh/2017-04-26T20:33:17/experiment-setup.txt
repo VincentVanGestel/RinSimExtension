@@ -1,0 +1,9 @@
+Experiment summary
+Number of simulations: 10
+Number of configurations: 2
+Number of scenarios: 5
+Number of repetitions: 1
+Number of seed repetitions: 1
+Configurations:
+ReAuction-FFD-Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation-RP-100-BID-20-BALANCED_HIGH-NO-REAUCT-heuristic-GeomHeuristics.theoreticalTime(70.0)
+OP.RT-FFD-Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation

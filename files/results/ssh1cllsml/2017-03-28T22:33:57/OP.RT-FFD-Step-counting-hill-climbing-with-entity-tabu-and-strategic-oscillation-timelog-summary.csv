@@ -1,0 +1,6 @@
+problem-class,instance,config,random-seed,repetition,rt-tick-infos,avg-interarrival-time,rt-count,st-count
+0.20-20-0.50,1,OP.RT-FFD-Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation,123,0,1382,1000543118,1467,58449
+0.20-20-0.50,0,OP.RT-FFD-Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation,123,0,1545,999997933,1622,41899
+0.20-20-0.50,3,OP.RT-FFD-Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation,123,0,2412,1000001478,2487,66515
+0.20-20-0.50,4,OP.RT-FFD-Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation,123,0,1970,1000001479,2046,52946
+0.20-20-0.50,2,OP.RT-FFD-Step-counting-hill-climbing-with-entity-tabu-and-strategic-oscillation,123,0,3913,1000258467,3981,67488

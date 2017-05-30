@@ -1,0 +1,3 @@
+dynamism,urgency,scale,cost,travel_time,tardiness,over_time,is_valid,scenario_id,random_seed,repetition,comp_time,num_vehicles,num_orders,num_reauctions,num_unsuc_reauctions,num_failed_reauctions
+0.2,20,0.5,28464.646733333335,2885.046966666667,23164.2331,2415.366666666667,true,0.20-20-0.50-0,123,0,378561,5,60,0,0,0
+0.2,20,0.5,47985.1253,4820.48025,38873.19505,4291.45,true,0.20-20-0.50-1,123,0,387774,5,60,0,0,0
